@@ -98,15 +98,15 @@ async function handle(
 
   if (method !== "GET") {
     const contentType = request.headers.get("content-type") ?? "";
-
-    if (!contentType.includes("application/json")) {
-      return jsonError(415, "Envie os dados em JSON.");
-    }
-
+    const hasJsonContentType = contentType.includes("application/json");
     const contentLength = Number(request.headers.get("content-length") ?? "0");
 
     if (contentLength > MAX_BODY_BYTES) {
       return jsonError(413, "Requisição muito grande.");
+    }
+
+    if (!hasJsonContentType && (method !== "DELETE" || contentLength > 0)) {
+      return jsonError(415, "Envie os dados em JSON.");
     }
 
     body = await request.arrayBuffer();
@@ -115,7 +115,15 @@ async function handle(
       return jsonError(413, "Requisição muito grande.");
     }
 
-    headers["Content-Type"] = "application/json";
+    if (body.byteLength > 0) {
+      if (!hasJsonContentType) {
+        return jsonError(415, "Envie os dados em JSON.");
+      }
+
+      headers["Content-Type"] = "application/json";
+    } else {
+      body = undefined;
+    }
   }
 
   const upstreamPath = [resource, ...rest]

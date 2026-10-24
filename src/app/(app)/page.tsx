@@ -31,17 +31,31 @@ const ROLE_ABILITIES: Record<Role, string> = {
     "Gerencia a agenda e registra sessões realizadas.",
 };
 
-const UPCOMING_MODULES = [
+const AVAILABLE_MODULES = [
+  {
+    title: "Cidades",
+    description:
+      "Consulte as cidades atendidas. A gestão é exclusiva da gestora.",
+    href: "/cities",
+    icon: MapPin,
+  },
   {
     title: "Pacientes",
-    description: "Cadastro, busca paginada e histórico de sessões.",
+    description:
+      "Cadastro, busca por nome ou CPF e dados para contato.",
+    href: "/patients",
     icon: Users,
   },
   {
     title: "Agendamentos",
-    description: "Agenda por período, cidade e profissional.",
+    description:
+      "Agenda por período, cidade e profissional, com status.",
+    href: "/appointments",
     icon: CalendarDays,
   },
+] as const;
+
+const UPCOMING_MODULES = [
   {
     title: "Sessões",
     description: "Parâmetros técnicos, evolução e assinatura.",
@@ -94,32 +108,38 @@ export default async function DashboardPage() {
         </div>
 
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-          <Link
-            href="/cities"
-            className="group rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-          >
-            <Card className="h-full transition-colors group-hover:border-primary/30 group-hover:bg-accent/40">
-              <CardHeader>
-                <div className="flex items-center justify-between gap-2">
-                  <span className="grid size-10 place-items-center rounded-lg bg-secondary text-secondary-foreground">
-                    <MapPin className="size-5" aria-hidden="true" />
-                  </span>
-                  <Badge>Disponível</Badge>
-                </div>
-                <CardTitle className="pt-2">Cidades</CardTitle>
-                <CardDescription>
-                  Consulte as cidades atendidas. A gestão é exclusiva da
-                  gestora.
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <span className="inline-flex items-center gap-1 text-sm font-medium text-primary">
-                  Abrir módulo
-                  <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" />
-                </span>
-              </CardContent>
-            </Card>
-          </Link>
+          {AVAILABLE_MODULES.map((module) => {
+            const Icon = module.icon;
+
+            return (
+              <Link
+                key={module.title}
+                href={module.href}
+                className="group rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+              >
+                <Card className="h-full transition-colors group-hover:border-primary/30 group-hover:bg-accent/40">
+                  <CardHeader>
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="grid size-10 place-items-center rounded-lg bg-secondary text-secondary-foreground">
+                        <Icon className="size-5" aria-hidden="true" />
+                      </span>
+                      <Badge>Disponível</Badge>
+                    </div>
+                    <CardTitle className="pt-2">{module.title}</CardTitle>
+                    <CardDescription>
+                      {module.description}
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <span className="inline-flex items-center gap-1 text-sm font-medium text-primary">
+                      Abrir módulo
+                      <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" />
+                    </span>
+                  </CardContent>
+                </Card>
+              </Link>
+            );
+          })}
 
           {UPCOMING_MODULES.map((module) => {
             const Icon = module.icon;

@@ -56,11 +56,11 @@ interface NavItem {
 const NAV_ITEMS: readonly NavItem[] = [
   { label: "Visão geral", href: "/", icon: LayoutDashboard },
   { label: "Cidades", href: "/cities", icon: MapPin },
+  { label: "Pacientes", href: "/patients", icon: Users },
+  { label: "Agendamentos", href: "/appointments", icon: CalendarDays },
 ];
 
 const UPCOMING_ITEMS: readonly Omit<NavItem, "href">[] = [
-  { label: "Pacientes", icon: Users },
-  { label: "Agendamentos", icon: CalendarDays },
   { label: "Sessões", icon: ClipboardList },
 ];
 
@@ -83,6 +83,30 @@ function getPageTitle(pathname: string): string {
 
   if (pathname.startsWith("/cities")) {
     return "Cidades";
+  }
+
+  if (pathname === "/patients/new") {
+    return "Novo paciente";
+  }
+
+  if (/^\/patients\/[^/]+\/edit$/.test(pathname)) {
+    return "Editar paciente";
+  }
+
+  if (pathname.startsWith("/patients")) {
+    return "Pacientes";
+  }
+
+  if (pathname === "/appointments/new") {
+    return "Novo agendamento";
+  }
+
+  if (/^\/appointments\/[^/]+\/edit$/.test(pathname)) {
+    return "Editar agendamento";
+  }
+
+  if (pathname.startsWith("/appointments")) {
+    return "Agendamentos";
   }
 
   if (pathname.startsWith("/forbidden")) {
