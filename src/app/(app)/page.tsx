@@ -17,6 +17,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { ManagerDashboard } from "@/features/dashboard/components/manager-dashboard";
 import { LOGIN_PATH } from "@/lib/auth/constants";
 import { getRoleLabel } from "@/lib/auth/role-labels";
 import { getServerSession } from "@/lib/auth/session";
@@ -67,6 +68,10 @@ export default async function DashboardPage() {
 
   if (!user) {
     redirect(LOGIN_PATH);
+  }
+
+  if (user.role === "gestora") {
+    return <ManagerDashboard />;
   }
 
   return (

@@ -114,6 +114,7 @@ function StatusControl({
 export function AppointmentsView({ canWrite }: { canWrite: boolean }) {
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
+  const [status, setStatus] = useState<AppointmentStatus | "all">("all");
   const [cityId, setCityId] = useState("");
   const [professionalInput, setProfessionalInput] = useState("");
   const [updatingId, setUpdatingId] = useState<string | null>(null);
@@ -179,13 +180,22 @@ export function AppointmentsView({ canWrite }: { canWrite: boolean }) {
     [data],
   );
 
+  const filteredAppointments = useMemo(
+    () =>
+      status === "all"
+        ? appointments
+        : appointments.filter((appointment) => appointment.status === status),
+    [appointments, status],
+  );
+
   const hasFilters = Boolean(
-    fromDate || toDate || cityId || professionalInput,
+    fromDate || toDate || status !== "all" || cityId || professionalInput,
   );
 
   function clearFilters() {
     setFromDate("");
     setToDate("");
+    setStatus("all");
     setCityId("");
     setProfessionalInput("");
   }
@@ -235,7 +245,7 @@ export function AppointmentsView({ canWrite }: { canWrite: boolean }) {
             Refine a agenda por período, cidade ou profissional.
           </CardDescription>
         </CardHeader>
-        <CardContent className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <CardContent className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
           <Field>
             <FieldLabel htmlFor="filter-from">De</FieldLabel>
             <Input
@@ -256,6 +266,28 @@ export function AppointmentsView({ canWrite }: { canWrite: boolean }) {
               onChange={(event) => setToDate(event.target.value)}
               className="h-10"
             />
+          </Field>
+
+          <Field>
+            <FieldLabel htmlFor="filter-status">Status</FieldLabel>
+            <Select
+              value={status}
+              onValueChange={(value) =>
+                setStatus(value as AppointmentStatus | "all")
+              }
+            >
+              <SelectTrigger id="filter-status" className="h-10 w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos os status</SelectItem>
+                {APPOINTMENT_STATUS_OPTIONS.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </Field>
 
           <Field>
@@ -316,7 +348,7 @@ export function AppointmentsView({ canWrite }: { canWrite: boolean }) {
             <div className="flex items-center gap-2">
               <CardTitle>Agenda</CardTitle>
               {!isLoading && !error && (
-                <Badge variant="secondary">{appointments.length}</Badge>
+                <Badge variant="secondary">{filteredAppointments.length}</Badge>
               )}
             </div>
             <CardDescription>
@@ -342,7 +374,7 @@ export function AppointmentsView({ canWrite }: { canWrite: boolean }) {
                 </Button>
               </AlertDescription>
             </Alert>
-          ) : appointments.length === 0 ? (
+          ) : filteredAppointments.length === 0 ? (
             <div className="flex flex-col items-center justify-center gap-3 rounded-xl border border-dashed px-4 py-14 text-center">
               <span className="grid size-12 place-items-center rounded-full bg-muted text-muted-foreground">
                 <CalendarDays className="size-6" aria-hidden="true" />
@@ -400,7 +432,7 @@ export function AppointmentsView({ canWrite }: { canWrite: boolean }) {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {appointments.map((appointment) => (
+                    {filteredAppointments.map((appointment) => (
                       <TableRow key={appointment.id}>
                         <TableCell className="font-medium">
                           {formatDateTime(appointment.scheduledAt)}
@@ -451,7 +483,7 @@ export function AppointmentsView({ canWrite }: { canWrite: boolean }) {
               </div>
 
               <div className="space-y-3 lg:hidden">
-                {appointments.map((appointment) => (
+                {filteredAppointments.map((appointment) => (
                   <Card key={appointment.id} size="sm">
                     <CardContent className="space-y-3">
                       <div className="flex items-start justify-between gap-3">

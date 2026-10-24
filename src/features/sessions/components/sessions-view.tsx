@@ -9,7 +9,7 @@ import {
   UserRound,
 } from "lucide-react";
 import Link from "next/link";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 
 import { PageHeader } from "@/components/layout/page-header";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -23,13 +23,26 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Field, FieldLabel } from "@/components/ui/field";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  APPOINTMENT_STATUS_OPTIONS,
+  APPOINTMENT_STATUS_BADGE_VARIANTS,
+  getAppointmentStatusLabel,
+} from "@/features/appointments/utils";
 import { PatientCombobox } from "@/features/appointments/components/patient-combobox";
 import { shortId, sortSessionsByPerformedAt } from "@/features/sessions/utils";
 import { useApiQuery } from "@/hooks";
-import { formatDateTime } from "@/lib/format/date";
-import { sessionsService } from "@/services";
-import type { SessionRecord } from "@/types";
+import { formatDateTime, toDateInputValue } from "@/lib/format/date";
+import { appointmentsService, sessionsService } from "@/services";
+import type { AppointmentStatus, SessionRecord } from "@/types";
 
 interface TechItemProps {
   label: string;
@@ -47,7 +60,13 @@ function TechItem({ label, value }: TechItemProps) {
   );
 }
 
-function SessionCard({ session }: { session: SessionRecord }) {
+function SessionCard({
+  session,
+  appointmentStatus,
+}: {
+  session: SessionRecord;
+  appointmentStatus: AppointmentStatus | null;
+}) {
   return (
     <Card size="sm">
       <CardHeader>
@@ -65,8 +84,16 @@ function SessionCard({ session }: { session: SessionRecord }) {
               </CardDescription>
             </div>
           </div>
-          <Badge variant="secondary" className="font-mono">
-            #{session.sessionNumber}
+          <Badge
+            variant={
+              appointmentStatus
+                ? APPOINTMENT_STATUS_BADGE_VARIANTS[appointmentStatus]
+                : "outline"
+            }
+          >
+            {appointmentStatus
+              ? getAppointmentStatusLabel(appointmentStatus)
+              : "Sem status"}
           </Badge>
         </div>
       </CardHeader>
@@ -136,14 +163,57 @@ export function SessionsView({
   canWrite: boolean;
 }) {
   const [patientId, setPatientId] = useState(initialPatientId);
+  const [fromDate, setFromDate] = useState("");
+  const [toDate, setToDate] = useState("");
+  const [status, setStatus] = useState<AppointmentStatus | "all">("all");
 
   const { data, error, isLoading, refetch } = useApiQuery(
     (signal) => sessionsService.listByPatient(patientId, { signal }),
     `sessions:${patientId}`,
     { enabled: Boolean(patientId) },
   );
+  const {
+    data: appointments,
+    error: appointmentsError,
+    isLoading: appointmentsLoading,
+    refetch: refetchAppointments,
+  } = useApiQuery(
+    (signal) => appointmentsService.list({}, { signal }),
+    "sessions-appointments",
+    { enabled: Boolean(patientId) },
+  );
 
   const sessions = sortSessionsByPerformedAt(data ?? []);
+  const appointmentsById = useMemo(
+    () => new Map((appointments ?? []).map((appointment) => [appointment.id, appointment])),
+    [appointments],
+  );
+  const filteredSessions = useMemo(
+    () =>
+      sessions.filter((session) => {
+        const sessionDate = toDateInputValue(session.performedAt);
+        const appointment = session.appointmentId
+          ? appointmentsById.get(session.appointmentId)
+          : undefined;
+
+        if (
+          (fromDate && sessionDate < fromDate) ||
+          (toDate && sessionDate > toDate)
+        ) {
+          return false;
+        }
+
+        return status === "all" || appointment?.status === status;
+      }),
+    [appointmentsById, fromDate, sessions, status, toDate],
+  );
+  const loadError = error ?? appointmentsError;
+  const isLoadingHistory = isLoading || appointmentsLoading;
+
+  function retryHistory() {
+    refetch();
+    refetchAppointments();
+  }
 
   const createAction = canWrite ? (
     <Button asChild>
@@ -187,6 +257,60 @@ export function SessionsView({
         </CardContent>
       </Card>
 
+      {patientId && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Filtros do histórico</CardTitle>
+            <CardDescription>
+              O período considera a data de realização; o status vem do agendamento relacionado.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="grid gap-4 sm:grid-cols-3">
+            <Field>
+              <FieldLabel htmlFor="session-from">De</FieldLabel>
+              <Input
+                id="session-from"
+                type="date"
+                value={fromDate}
+                max={toDate || undefined}
+                onChange={(event) => setFromDate(event.target.value)}
+              />
+            </Field>
+            <Field>
+              <FieldLabel htmlFor="session-to">Até</FieldLabel>
+              <Input
+                id="session-to"
+                type="date"
+                value={toDate}
+                min={fromDate || undefined}
+                onChange={(event) => setToDate(event.target.value)}
+              />
+            </Field>
+            <Field>
+              <FieldLabel htmlFor="session-status">Status do agendamento</FieldLabel>
+              <Select
+                value={status}
+                onValueChange={(value) =>
+                  setStatus(value as AppointmentStatus | "all")
+                }
+              >
+                <SelectTrigger id="session-status" className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos os status</SelectItem>
+                  {APPOINTMENT_STATUS_OPTIONS.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </Field>
+          </CardContent>
+        </Card>
+      )}
+
       {!patientId ? (
         <div className="flex flex-col items-center justify-center gap-3 rounded-xl border border-dashed px-4 py-14 text-center">
           <span className="grid size-12 place-items-center rounded-full bg-muted text-muted-foreground">
@@ -199,34 +323,40 @@ export function SessionsView({
             </p>
           </div>
         </div>
-      ) : isLoading ? (
+      ) : isLoadingHistory ? (
         <LoadingState />
-      ) : error ? (
+      ) : loadError ? (
         <Alert variant="destructive">
           <AlertTriangle className="size-4" />
           <AlertTitle>Não foi possível carregar as sessões</AlertTitle>
           <AlertDescription className="space-y-3">
-            <p>{error}</p>
-            <Button type="button" size="sm" onClick={refetch}>
+            <p>{loadError}</p>
+            <Button type="button" size="sm" onClick={retryHistory}>
               <RefreshCw className="size-4" />
               Tentar novamente
             </Button>
           </AlertDescription>
         </Alert>
-      ) : sessions.length === 0 ? (
+      ) : filteredSessions.length === 0 ? (
         <div className="flex flex-col items-center justify-center gap-3 rounded-xl border border-dashed px-4 py-14 text-center">
           <span className="grid size-12 place-items-center rounded-full bg-muted text-muted-foreground">
             <CalendarClock className="size-6" aria-hidden="true" />
           </span>
           <div className="space-y-1">
-            <p className="font-medium">Nenhuma sessão registrada</p>
+            <p className="font-medium">
+              {sessions.length === 0
+                ? "Nenhuma sessão registrada"
+                : "Nenhuma sessão corresponde aos filtros"}
+            </p>
             <p className="text-sm text-muted-foreground">
-              {canWrite
+              {sessions.length > 0
+                ? "Ajuste o período ou o status do agendamento."
+                : canWrite
                 ? "Registre a primeira sessão desta paciente."
                 : "Ainda não há sessões registradas para esta paciente."}
             </p>
           </div>
-          {canWrite && (
+          {canWrite && sessions.length === 0 && (
             <Button asChild size="sm">
               <Link
                 href={`/sessions/new?patientId=${encodeURIComponent(patientId)}`}
@@ -239,8 +369,16 @@ export function SessionsView({
         </div>
       ) : (
         <div className="space-y-4">
-          {sessions.map((session) => (
-            <SessionCard key={session.id} session={session} />
+          {filteredSessions.map((session) => (
+            <SessionCard
+              key={session.id}
+              session={session}
+              appointmentStatus={
+                session.appointmentId
+                  ? appointmentsById.get(session.appointmentId)?.status ?? null
+                  : null
+              }
+            />
           ))}
         </div>
       )}
