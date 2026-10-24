@@ -4,6 +4,7 @@ import {
   AlertTriangle,
   CalendarClock,
   ClipboardList,
+  Pencil,
   Plus,
   RefreshCw,
   UserRound,
@@ -32,17 +33,20 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
-import {
-  APPOINTMENT_STATUS_OPTIONS,
-  APPOINTMENT_STATUS_BADGE_VARIANTS,
-  getAppointmentStatusLabel,
-} from "@/features/appointments/utils";
+import { getAppointmentStatusLabel } from "@/features/appointments/utils";
 import { PatientCombobox } from "@/features/appointments/components/patient-combobox";
-import { shortId, sortSessionsByPerformedAt } from "@/features/sessions/utils";
+import { EditSessionDialog } from "@/features/sessions/components/edit-session-dialog";
+import {
+  SESSION_STATUS_OPTIONS,
+  SESSION_STATUS_BADGE_VARIANTS,
+  getSessionStatusLabel,
+  shortId,
+  sortSessionsByPerformedAt,
+} from "@/features/sessions/utils";
 import { useApiQuery } from "@/hooks";
 import { formatDateTime, toDateInputValue } from "@/lib/format/date";
 import { appointmentsService, sessionsService } from "@/services";
-import type { AppointmentStatus, SessionRecord } from "@/types";
+import type { Appointment, SessionRecord, SessionStatus } from "@/types";
 
 interface TechItemProps {
   label: string;
@@ -62,11 +66,20 @@ function TechItem({ label, value }: TechItemProps) {
 
 function SessionCard({
   session,
-  appointmentStatus,
+  appointment,
+  canWrite,
+  onEdit,
 }: {
   session: SessionRecord;
-  appointmentStatus: AppointmentStatus | null;
+  appointment?: Appointment;
+  canWrite: boolean;
+  onEdit: (session: SessionRecord) => void;
 }) {
+  const sessionStatus = session.status ?? "completed";
+  const badgeVariant =
+    SESSION_STATUS_BADGE_VARIANTS[sessionStatus] ?? "default";
+  const statusLabel = getSessionStatusLabel(sessionStatus);
+
   return (
     <Card size="sm">
       <CardHeader>
@@ -84,17 +97,20 @@ function SessionCard({
               </CardDescription>
             </div>
           </div>
-          <Badge
-            variant={
-              appointmentStatus
-                ? APPOINTMENT_STATUS_BADGE_VARIANTS[appointmentStatus]
-                : "outline"
-            }
-          >
-            {appointmentStatus
-              ? getAppointmentStatusLabel(appointmentStatus)
-              : "Sem status"}
-          </Badge>
+          <div className="flex items-center gap-2">
+            <Badge variant={badgeVariant}>{statusLabel}</Badge>
+            {canWrite && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => onEdit(session)}
+                className="h-8 gap-1.5"
+              >
+                <Pencil className="size-3.5" />
+                <span>Editar</span>
+              </Button>
+            )}
+          </div>
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -133,7 +149,13 @@ function SessionCard({
         <div className="flex flex-wrap gap-x-6 gap-y-1 text-xs text-muted-foreground">
           <span>
             Agendamento:{" "}
-            <span className="font-mono">{shortId(session.appointmentId)}</span>
+            {appointment ? (
+              <span className="font-mono">
+                {shortId(appointment.id)} ({getAppointmentStatusLabel(appointment.status)})
+              </span>
+            ) : (
+              <span className="font-mono">{shortId(session.appointmentId)}</span>
+            )}
           </span>
           <span>
             Aplicador:{" "}
@@ -161,11 +183,12 @@ export function SessionsView({
 }: {
   initialPatientId: string;
   canWrite: boolean;
-}) {
+  }) {
   const [patientId, setPatientId] = useState(initialPatientId);
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
-  const [status, setStatus] = useState<AppointmentStatus | "all">("all");
+  const [status, setStatus] = useState<SessionStatus | "all">("all");
+  const [editingSession, setEditingSession] = useState<SessionRecord | null>(null);
 
   const { data, error, isLoading, refetch } = useApiQuery(
     (signal) => sessionsService.listByPatient(patientId, { signal }),
@@ -185,16 +208,29 @@ export function SessionsView({
 
   const sessions = sortSessionsByPerformedAt(data ?? []);
   const appointmentsById = useMemo(
-    () => new Map((appointments ?? []).map((appointment) => [appointment.id, appointment])),
+    () =>
+      new Map(
+        (appointments ?? []).map((appointment) => [
+          appointment.id,
+          appointment,
+        ]),
+      ),
     [appointments],
   );
+
+  const patientAppointments = useMemo(
+    () =>
+      (appointments ?? []).filter(
+        (appointment) => appointment.patientId === patientId,
+      ),
+    [appointments, patientId],
+  );
+
   const filteredSessions = useMemo(
     () =>
       sessions.filter((session) => {
         const sessionDate = toDateInputValue(session.performedAt);
-        const appointment = session.appointmentId
-          ? appointmentsById.get(session.appointmentId)
-          : undefined;
+        const sessionStatus = session.status ?? "completed";
 
         if (
           (fromDate && sessionDate < fromDate) ||
@@ -203,9 +239,9 @@ export function SessionsView({
           return false;
         }
 
-        return status === "all" || appointment?.status === status;
+        return status === "all" || sessionStatus === status;
       }),
-    [appointmentsById, fromDate, sessions, status, toDate],
+    [fromDate, sessions, status, toDate],
   );
   const loadError = error ?? appointmentsError;
   const isLoadingHistory = isLoading || appointmentsLoading;
@@ -262,7 +298,7 @@ export function SessionsView({
           <CardHeader>
             <CardTitle className="text-base">Filtros do histórico</CardTitle>
             <CardDescription>
-              O período considera a data de realização; o status vem do agendamento relacionado.
+              O período considera a data de realização e os filtros por status da sessão.
             </CardDescription>
           </CardHeader>
           <CardContent className="grid gap-4 sm:grid-cols-3">
@@ -287,11 +323,11 @@ export function SessionsView({
               />
             </Field>
             <Field>
-              <FieldLabel htmlFor="session-status">Status do agendamento</FieldLabel>
+              <FieldLabel htmlFor="session-status">Status da sessão</FieldLabel>
               <Select
                 value={status}
                 onValueChange={(value) =>
-                  setStatus(value as AppointmentStatus | "all")
+                  setStatus(value as SessionStatus | "all")
                 }
               >
                 <SelectTrigger id="session-status" className="w-full">
@@ -299,7 +335,7 @@ export function SessionsView({
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Todos os status</SelectItem>
-                  {APPOINTMENT_STATUS_OPTIONS.map((option) => (
+                  {SESSION_STATUS_OPTIONS.map((option) => (
                     <SelectItem key={option.value} value={option.value}>
                       {option.label}
                     </SelectItem>
@@ -350,7 +386,7 @@ export function SessionsView({
             </p>
             <p className="text-sm text-muted-foreground">
               {sessions.length > 0
-                ? "Ajuste o período ou o status do agendamento."
+                ? "Ajuste o período ou o status da sessão."
                 : canWrite
                 ? "Registre a primeira sessão desta paciente."
                 : "Ainda não há sessões registradas para esta paciente."}
@@ -373,15 +409,31 @@ export function SessionsView({
             <SessionCard
               key={session.id}
               session={session}
-              appointmentStatus={
+              appointment={
                 session.appointmentId
-                  ? appointmentsById.get(session.appointmentId)?.status ?? null
-                  : null
+                  ? appointmentsById.get(session.appointmentId)
+                  : undefined
               }
+              canWrite={canWrite}
+              onEdit={setEditingSession}
             />
           ))}
         </div>
       )}
+
+      <EditSessionDialog
+        session={editingSession}
+        open={Boolean(editingSession)}
+        onOpenChange={(open) => {
+          if (!open) setEditingSession(null);
+        }}
+        appointments={patientAppointments}
+        isLoadingAppointments={appointmentsLoading}
+        onSuccess={() => {
+          refetch();
+          refetchAppointments();
+        }}
+      />
     </div>
   );
 }

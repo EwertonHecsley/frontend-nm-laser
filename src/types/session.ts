@@ -1,5 +1,7 @@
 import type { AuditFields } from "./common";
 
+export type SessionStatus = "completed" | "in_progress" | "cancelled";
+
 export interface SessionRecord extends AuditFields {
   appointmentId: string | null;
   patientId: string;
@@ -12,6 +14,7 @@ export interface SessionRecord extends AuditFields {
   energyAccumulated: string | null;
   observations: string | null;
   signature: string | null;
+  status: SessionStatus | string;
 }
 
 export interface CreateSessionInput {
@@ -26,4 +29,20 @@ export interface CreateSessionInput {
   energyAccumulated?: string;
   observations?: string;
   signature?: string;
+  status?: SessionStatus | string;
 }
+
+export interface UpdateSessionInput {
+  appointmentId?: string | null;
+  sessionNumber?: string;
+  performedAt?: string;
+  applicatorId?: string | null;
+  potency?: string | null;
+  frequency?: string | null;
+  technique?: string | null;
+  energyAccumulated?: string | null;
+  observations?: string | null;
+  signature?: string | null;
+  status?: SessionStatus | string;
+}
+

@@ -35,6 +35,7 @@ const METHOD_PERMISSIONS: Record<
   },
   sessions: {
     POST: "sessions:write",
+    PATCH: "sessions:write",
   },
 };
 

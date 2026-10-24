@@ -30,9 +30,12 @@ Base URL: `http://localhost:3030` (configurável via env). Autenticação: JWT B
 Status: scheduled, arrived, performed, missed, rescheduled, cancelled.
 
 ### Sessões
-- POST /sessions { appointmentId?, patientId, sessionNumber, performedAt, applicatorId?, potency?, frequency?, technique?, energyAccumulated?, observations?, signature? }
+- POST /sessions { appointmentId?, patientId, sessionNumber, performedAt, applicatorId?, potency?, frequency?, technique?, energyAccumulated?, observations?, signature?, status? }
 - GET /sessions?patientId=
 - GET /sessions/:id
+- PATCH /sessions/:id { appointmentId?, sessionNumber?, performedAt?, applicatorId?, potency?, frequency?, technique?, energyAccumulated?, observations?, signature?, status? }
+Status da sessão: completed, in_progress, cancelled (padrão: completed).
+
 
 ### Sync (offline)
 - POST /sync { operations: [{ idempotencyKey, entityType, action, payload }] }

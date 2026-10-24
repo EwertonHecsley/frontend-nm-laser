@@ -31,6 +31,7 @@
 | POST | `/sessions` | Implementado | `gestora`, `aplicadora` |
 | GET | `/sessions?patientId=...` | Implementado | Qualquer usuário autenticado |
 | GET | `/sessions/:id` | Implementado | Qualquer usuário autenticado |
+| PATCH | `/sessions/:id` | Implementado | `gestora`, `aplicadora` |
 | POST | `/sync` | Módulo registrado no `AppModule`; serviço ainda não aplica payload às entidades | Parcialmente disponível (idempotência apenas) |
 
 ### Endpoints que NÃO estão implementados neste snapshot
@@ -372,7 +373,16 @@ Retorna uma lista de sessões da paciente. O parâmetro `patientId` deve ser inf
 
 Retorna uma sessão ou `404`.
 
-**Limitações de negócio:** criar sessão não consome saldo de pacote (não existe serviço de pacotes/vendas implementado), não altera automaticamente o status do agendamento e não valida que `appointmentId` pertença à mesma paciente.
+### `PATCH /sessions/:id`
+
+Permissão: `gestora`, `aplicadora`.
+
+Permite editar os dados da sessão (status, agendamento vinculado, parâmetros técnicos, número da sessão, data/hora e observações).
+
+Body: campos opcionais a serem atualizados (`status`, `appointmentId`, `sessionNumber`, `performedAt`, `applicatorId`, `potency`, `frequency`, `technique`, `energyAccumulated`, `observations`, `signature`).
+
+Resposta: registro atualizado.
+
 
 ## 8. Health check
 

@@ -38,6 +38,7 @@ import {
   sessionFormSchema,
   type SessionFormValues,
 } from "@/features/sessions/schemas";
+import { SESSION_STATUS_OPTIONS } from "@/features/sessions/utils";
 import { useApiQuery } from "@/hooks";
 import { formatDateTime, toDateTimeInputValue } from "@/lib/format/date";
 import { getErrorMessage } from "@/lib/http/errors";
@@ -63,6 +64,7 @@ export function SessionForm({ initialPatientId = "" }: SessionFormProps) {
     resolver: zodResolver(sessionFormSchema),
     defaultValues: {
       patientId: initialPatientId,
+      status: "completed",
       appointmentId: "",
       sessionNumber: "1",
       performedAt: "",
@@ -109,6 +111,7 @@ export function SessionForm({ initialPatientId = "" }: SessionFormProps) {
     try {
       await sessionsService.create({
         patientId: values.patientId,
+        status: values.status,
         sessionNumber: values.sessionNumber,
         performedAt: new Date(values.performedAt).toISOString(),
         appointmentId: values.appointmentId.trim() || undefined,
@@ -197,6 +200,32 @@ export function SessionForm({ initialPatientId = "" }: SessionFormProps) {
                 {...register("performedAt")}
               />
               <FieldError errors={[errors.performedAt]} />
+            </Field>
+
+            <Field data-invalid={Boolean(errors.status)} className="sm:col-span-2">
+              <FieldLabel htmlFor="status">Status da sessão</FieldLabel>
+              <Controller
+                control={control}
+                name="status"
+                render={({ field }) => (
+                  <Select
+                    value={field.value}
+                    onValueChange={field.onChange}
+                  >
+                    <SelectTrigger id="status" className="h-11 w-full">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {SESSION_STATUS_OPTIONS.map((opt) => (
+                        <SelectItem key={opt.value} value={opt.value}>
+                          {opt.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              />
+              <FieldError errors={[errors.status]} />
             </Field>
 
             <Field
