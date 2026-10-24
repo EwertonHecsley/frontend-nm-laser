@@ -4,6 +4,7 @@ import {
   AlertTriangle,
   ChevronLeft,
   ChevronRight,
+  ClipboardList,
   Loader2,
   Pencil,
   Plus,
@@ -68,12 +69,19 @@ function PatientActions({
   canDelete: boolean;
   onDelete: (patient: Patient) => void;
 }) {
-  if (!canWrite && !canDelete) {
-    return null;
-  }
-
   return (
     <div className="flex items-center justify-end gap-1">
+      <Button
+        type="button"
+        variant="ghost"
+        size="icon-sm"
+        asChild
+        aria-label={`Ver histórico de sessões de ${patient.fullName}`}
+      >
+        <Link href={`/sessions?patientId=${patient.id}`}>
+          <ClipboardList className="size-4" />
+        </Link>
+      </Button>
       {canWrite && (
         <Button
           type="button"
@@ -304,11 +312,9 @@ export function PatientsView({
                       <TableHead className="hidden xl:table-cell">
                         WhatsApp
                       </TableHead>
-                      {(canWrite || canDelete) && (
-                        <TableHead className="w-[1%] text-right">
-                          Ações
-                        </TableHead>
-                      )}
+                      <TableHead className="w-[1%] text-right">
+                        Ações
+                      </TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -341,16 +347,14 @@ export function PatientsView({
                         <TableCell className="hidden text-muted-foreground xl:table-cell">
                           {formatPhone(patient.whatsapp)}
                         </TableCell>
-                        {(canWrite || canDelete) && (
-                          <TableCell className="text-right">
-                            <PatientActions
-                              patient={patient}
-                              canWrite={canWrite}
-                              canDelete={canDelete}
-                              onDelete={setPatientToDelete}
-                            />
-                          </TableCell>
-                        )}
+                        <TableCell className="text-right">
+                          <PatientActions
+                            patient={patient}
+                            canWrite={canWrite}
+                            canDelete={canDelete}
+                            onDelete={setPatientToDelete}
+                          />
+                        </TableCell>
                       </TableRow>
                     ))}
                   </TableBody>

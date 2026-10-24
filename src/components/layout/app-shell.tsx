@@ -58,10 +58,7 @@ const NAV_ITEMS: readonly NavItem[] = [
   { label: "Cidades", href: "/cities", icon: MapPin },
   { label: "Pacientes", href: "/patients", icon: Users },
   { label: "Agendamentos", href: "/appointments", icon: CalendarDays },
-];
-
-const UPCOMING_ITEMS: readonly Omit<NavItem, "href">[] = [
-  { label: "Sessões", icon: ClipboardList },
+  { label: "Sessões", href: "/sessions", icon: ClipboardList },
 ];
 
 function isActivePath(pathname: string, href: string): boolean {
@@ -107,6 +104,14 @@ function getPageTitle(pathname: string): string {
 
   if (pathname.startsWith("/appointments")) {
     return "Agendamentos";
+  }
+
+  if (pathname === "/sessions/new") {
+    return "Nova sessão";
+  }
+
+  if (pathname.startsWith("/sessions")) {
+    return "Sessões";
   }
 
   if (pathname.startsWith("/forbidden")) {
@@ -176,49 +181,6 @@ function NavLink({
     <Tooltip>
       <TooltipTrigger asChild>{link}</TooltipTrigger>
       <TooltipContent side="right">{item.label}</TooltipContent>
-    </Tooltip>
-  );
-}
-
-function UpcomingItem({
-  item,
-  collapsed,
-}: {
-  item: Omit<NavItem, "href">;
-  collapsed: boolean;
-}) {
-  const Icon = item.icon;
-  const content = (
-    <div
-      aria-disabled="true"
-      className={cn(
-        "flex min-h-10 cursor-not-allowed items-center gap-3 rounded-lg px-3 text-sm font-medium text-muted-foreground/60",
-        collapsed && "justify-center px-0",
-      )}
-    >
-      <Icon className="size-5 shrink-0" aria-hidden="true" />
-      {!collapsed && (
-        <>
-          <span className="truncate">{item.label}</span>
-          <Badge
-            variant="outline"
-            className="ml-auto border-dashed text-[10px] font-normal"
-          >
-            em breve
-          </Badge>
-        </>
-      )}
-    </div>
-  );
-
-  if (!collapsed) {
-    return content;
-  }
-
-  return (
-    <Tooltip>
-      <TooltipTrigger asChild>{content}</TooltipTrigger>
-      <TooltipContent side="right">{item.label} (em breve)</TooltipContent>
     </Tooltip>
   );
 }
@@ -306,21 +268,6 @@ function SidebarContent({
               active={isActivePath(pathname, item.href)}
               collapsed={collapsed}
               onNavigate={onNavigate}
-            />
-          ))}
-        </div>
-
-        <div className="space-y-1">
-          {!collapsed && (
-            <p className="px-3 pb-1 text-xs font-medium tracking-wide text-muted-foreground">
-              Em preparação
-            </p>
-          )}
-          {UPCOMING_ITEMS.map((item) => (
-            <UpcomingItem
-              key={item.label}
-              item={item}
-              collapsed={collapsed}
             />
           ))}
         </div>

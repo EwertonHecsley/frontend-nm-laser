@@ -77,13 +77,16 @@ async function handle(
     return jsonError(404, "Recurso não encontrado.");
   }
 
-  const requiredPermission =
-    method === "GET"
-      ? undefined
-      : METHOD_PERMISSIONS[resource]?.[method];
+  if (method !== "GET") {
+    const requiredPermission = METHOD_PERMISSIONS[resource]?.[method];
 
-  if (requiredPermission && !hasPermission(session.role, requiredPermission)) {
-    return jsonError(403, "Você não tem permissão para executar esta ação.");
+    if (!requiredPermission) {
+      return jsonError(405, "Método não permitido para este recurso.");
+    }
+
+    if (!hasPermission(session.role, requiredPermission)) {
+      return jsonError(403, "Você não tem permissão para executar esta ação.");
+    }
   }
 
   if (method !== "GET" && !isSameOriginRequest(request)) {

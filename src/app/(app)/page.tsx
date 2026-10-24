@@ -53,12 +53,11 @@ const AVAILABLE_MODULES = [
     href: "/appointments",
     icon: CalendarDays,
   },
-] as const;
-
-const UPCOMING_MODULES = [
   {
     title: "Sessões",
-    description: "Parâmetros técnicos, evolução e assinatura.",
+    description:
+      "Histórico por paciente, parâmetros técnicos e assinatura.",
+    href: "/sessions",
     icon: ClipboardList,
   },
 ] as const;
@@ -102,8 +101,7 @@ export default async function DashboardPage() {
             Módulos
           </h2>
           <p className="text-sm text-muted-foreground">
-            Apenas os recursos com endpoints disponíveis no backend aparecem
-            como ativos.
+            Acesse os módulos operacionais disponíveis para a sua rotina.
           </p>
         </div>
 
@@ -138,36 +136,6 @@ export default async function DashboardPage() {
                   </CardContent>
                 </Card>
               </Link>
-            );
-          })}
-
-          {UPCOMING_MODULES.map((module) => {
-            const Icon = module.icon;
-
-            return (
-              <Card
-                key={module.title}
-                aria-disabled="true"
-                className="h-full border-dashed bg-muted/30 opacity-80"
-              >
-                <CardHeader>
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="grid size-10 place-items-center rounded-lg bg-muted text-muted-foreground">
-                      <Icon className="size-5" aria-hidden="true" />
-                    </span>
-                    <Badge variant="outline" className="border-dashed">
-                      Em preparação
-                    </Badge>
-                  </div>
-                  <CardTitle className="pt-2">{module.title}</CardTitle>
-                  <CardDescription>{module.description}</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <span className="text-sm text-muted-foreground">
-                    Estrutura de dados e serviços já preparada.
-                  </span>
-                </CardContent>
-              </Card>
             );
           })}
         </div>

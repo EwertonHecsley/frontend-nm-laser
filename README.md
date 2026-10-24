@@ -1,36 +1,98 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# CRM NM Laser — Frontend
 
-## Getting Started
+Frontend do CRM clínico da NM Laser, construído com Next.js (App Router), TypeScript, Tailwind CSS e shadcn/ui. O navegador conversa apenas com um BFF same-origin do próprio Next.js; o token de acesso fica em cookie HttpOnly e nunca é exposto ao JavaScript da página.
 
-First, run the development server:
+## Stack
+
+- Next.js 16 (App Router, Turbopack)
+- React 19
+- TypeScript
+- Tailwind CSS 4 + shadcn/ui + `radix-ui`
+- React Hook Form + Zod
+- Zustand
+- sonner (toasts)
+- lucide-react (ícones)
+
+## Requisitos
+
+- Node.js 20+
+- Backend NestJS do CRM disponível (padrão `http://localhost:3030`)
+
+## Variáveis de ambiente
+
+Copie `.env.example` para `.env.local` e ajuste conforme o ambiente:
+
+| Variável | Descrição | Padrão |
+|---|---|---|
+| `BACKEND_API_URL` | URL interna do backend NestJS. Nunca é exposta ao navegador. | `http://localhost:3030` |
+| `NEXT_PUBLIC_API_BASE_PATH` | Caminho same-origin do BFF consumido pelo cliente HTTP. | `/api/backend` |
+
+## Scripts
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm run dev        # servidor de desenvolvimento
+npm run build      # build de produção
+npm run start      # inicia o build de produção
+npm run lint       # ESLint
+npm run typecheck  # checagem de tipos (tsc --noEmit)
+npm run check      # typecheck + lint + build
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Arquitetura
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```
+src/
+  app/                     Rotas (App Router)
+    (auth)/login/          Tela de login
+    (app)/                 Área autenticada (layout + app shell)
+      cities/              Cidades
+      patients/            Pacientes
+      appointments/        Agendamentos
+      sessions/            Sessões
+    api/
+      auth/                Login, logout e sessão (BFF de autenticação)
+      backend/[...path]/    Proxy same-origin para o backend (BFF)
+  components/              UI, layout e providers
+  features/                Regras e componentes por domínio
+  hooks/                   Hooks reutilizáveis (query, debounce, permissão)
+  lib/                     Auth, HTTP, formatação, segurança e config
+  services/                Clientes tipados da API
+  store/                   Zustand (slices + seletores)
+  types/                   Tipos compartilhados
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### Segurança
 
-## Learn More
+- **Sessão HttpOnly:** o token JWT é gravado em cookie `HttpOnly` pela rota de login do BFF. O cliente usa apenas o cookie de sessão; a URL interna do backend não é exposta.
+- **BFF com allowlist:** `src/app/api/backend/[...path]/route.ts` só aceita os recursos `cities`, `patients`, `appointments` e `sessions`, valida método HTTP e aplica permissões por perfil antes de encaminhar. Métodos não mapeados são negados por padrão (`405`).
+- **Autorização em camadas:** proxy (`src/proxy.ts`), páginas de servidor, componentes e BFF checam permissões; a API continua sendo a autoridade final.
+- **Cabeçalhos de segurança:** CSP e demais headers configurados em `next.config.ts`.
+- **Sanitização:** entradas são normalizadas em `src/lib/security/sanitize.ts` antes do envio.
 
-To learn more about Next.js, take a look at the following resources:
+### Perfis e permissões (RBAC)
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+| Recurso | gestora | vendas | aplicadora |
+|---|---|---|---|
+| Cidades (ler) | sim | sim | sim |
+| Cidades (gerenciar) | sim | não | não |
+| Pacientes (ler) | sim | sim | sim |
+| Pacientes (criar/editar) | sim | sim | não |
+| Pacientes (excluir) | sim | não | não |
+| Agendamentos (ler/escrever) | sim | sim | sim |
+| Sessões (ler) | sim | sim | sim |
+| Sessões (registrar) | sim | não | sim |
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Módulos
 
-## Deploy on Vercel
+- **Cidades:** listagem, busca, criação, edição e exclusão.
+- **Pacientes:** listagem paginada com busca por nome/CPF, criação, edição, exclusão e atalho para o histórico de sessões.
+- **Agendamentos:** agenda com filtros por período, cidade e profissional, criação, edição e alteração rápida de status.
+- **Sessões:** registro de sessão com parâmetros técnicos e histórico por paciente.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Limitações conhecidas
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- O backend não expõe listagem de usuários/profissionais, então `professionalId` (agendamentos) e `applicatorId` (sessões) são informados como UUID opcional.
+- `GET /appointments` e `GET /sessions` não possuem paginação; listas extensas podem exigir evolução do contrato.
+- `PATCH /patients/:id` não aceita `cpf`; o campo é somente leitura na edição e nunca é enviado.
+- Não há endpoint de exclusão de agendamento nem edição de sessão.
+- A sincronização offline (`POST /sync`) do backend ainda é parcial; o frontend não ativa fila offline.

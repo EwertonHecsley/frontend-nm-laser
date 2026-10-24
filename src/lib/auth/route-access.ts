@@ -17,6 +17,7 @@ const ROUTE_ACCESS_RULES: readonly RouteAccessRule[] = [
     pattern: /^\/patients\/[^/]+\/edit\/?$/,
     roles: ["gestora", "vendas"],
   },
+  { pattern: /^\/sessions\/new\/?$/, roles: ["gestora", "aplicadora"] },
 ];
 
 export function getAllowedRoles(pathname: string): readonly Role[] | null {
