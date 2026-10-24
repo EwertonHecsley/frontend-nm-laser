@@ -51,9 +51,9 @@ function getDateInputValue(date: Date): string {
 }
 
 function initialPeriod(): { from: string; to: string } {
-  const to = new Date();
-  const from = new Date(to);
-  from.setDate(from.getDate() - 6);
+  const today = new Date();
+  const from = new Date(today.getFullYear(), today.getMonth(), 1);
+  const to = new Date(today.getFullYear(), today.getMonth() + 1, 0);
 
   return { from: getDateInputValue(from), to: getDateInputValue(to) };
 }
@@ -67,6 +67,7 @@ function getPresetRange(preset: string): { from: string; to: string } {
     from.setDate(from.getDate() - 6);
   } else if (preset === "thisMonth") {
     from.setDate(1);
+    to = new Date(today.getFullYear(), today.getMonth() + 1, 0);
   } else if (preset === "lastMonth") {
     from.setDate(1);
     from.setMonth(from.getMonth() - 1);
@@ -309,7 +310,7 @@ export function ManagerDashboard() {
             <div>
               <CardTitle className="text-base">Período do relatório</CardTitle>
               <CardDescription>
-                O intervalo é aplicado aos agendamentos e às métricas do painel.
+                O intervalo é aplicado aos agendamentos e às sessões concluídas.
               </CardDescription>
             </div>
             <Badge variant="secondary">Gestora</Badge>
@@ -412,7 +413,7 @@ export function ManagerDashboard() {
                 icon={CalendarCheck2}
               />
               <MetricCard
-                label="Agendados"
+                label="Agendamentos agendados"
                 value={statusCounts!.scheduled}
                 icon={CalendarDays}
               />
@@ -428,8 +429,8 @@ export function ManagerDashboard() {
               />
               <MetricCard
                 label="Sessões realizadas"
-                value={statusCounts!.performed}
-                detail="Agendamentos marcados como realizados"
+                value={data.completedSessionCount}
+                detail="Sessões concluídas no período selecionado"
                 icon={ClipboardCheck}
               />
             </div>
