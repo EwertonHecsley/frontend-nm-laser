@@ -37,12 +37,13 @@ import {
   formatCurrency,
   SaleCard,
 } from "@/features/sales/components/sale-card";
+import { PAYMENT_METHOD_OPTIONS } from "@/features/sales/utils";
 import { useApiQuery, usePagination } from "@/hooks";
 import { formatDate } from "@/lib/format/date";
 import { onlyDigits } from "@/lib/security/sanitize";
 import { formatPhone } from "@/features/patients/utils";
-import { salesService } from "@/services";
-import type { Sale, SaleListFilters } from "@/types";
+import { packagesService, salesService } from "@/services";
+import type { PaymentMethod, Sale, SaleListFilters } from "@/types";
 
 type PeriodPreset =
   | "thisMonth"
@@ -60,6 +61,8 @@ const PERIOD_OPTIONS: readonly { value: PeriodPreset; label: string }[] = [
 ];
 
 const DAY_IN_MS = 24 * 60 * 60 * 1000;
+const ALL_PACKAGES = "all";
+const ALL_PAYMENT_METHODS = "all";
 
 interface VendorClient {
   id: string;
@@ -323,9 +326,36 @@ function ClientCard({ client }: { client: VendorClientView }) {
 export function SalesVendorDashboard({ canWrite }: { canWrite: boolean }) {
   const [periodPreset, setPeriodPreset] =
     useState<PeriodPreset>("thisMonth");
-  const periodFilters = useMemo(
-    () => getPeriodFilters(periodPreset),
-    [periodPreset],
+  const [packageId, setPackageId] = useState("");
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod | "">("");
+  const clientFilters = useMemo<SaleListFilters>(
+    () => ({
+      packageId: packageId || undefined,
+      paymentMethod: paymentMethod || undefined,
+    }),
+    [packageId, paymentMethod],
+  );
+  const summaryFilters = useMemo<SaleListFilters>(
+    () => ({
+      ...getPeriodFilters(periodPreset),
+      packageId: packageId || undefined,
+      paymentMethod: paymentMethod || undefined,
+    }),
+    [packageId, paymentMethod, periodPreset],
+  );
+  const clientQueryKey = `${packageId}:${paymentMethod}`;
+  const summaryQueryKey = `${periodPreset}:${packageId}:${paymentMethod}`;
+  const hasFilters = Boolean(
+    periodPreset !== "thisMonth" || packageId || paymentMethod,
+  );
+
+  const {
+    data: packages,
+    isLoading: isLoadingPackages,
+    refetch: refetchPackages,
+  } = useApiQuery(
+    (signal) => packagesService.list({ signal }),
+    "vendor-sales-packages",
   );
 
   const {
@@ -334,8 +364,8 @@ export function SalesVendorDashboard({ canWrite }: { canWrite: boolean }) {
     isLoading: isLoadingSales,
     refetch: refetchSales,
   } = useApiQuery(
-    (signal) => salesService.list({}, { signal }),
-    "vendor-sales-clients",
+    (signal) => salesService.list(clientFilters, { signal }),
+    `vendor-sales-clients:${clientQueryKey}`,
   );
 
   const {
@@ -344,8 +374,8 @@ export function SalesVendorDashboard({ canWrite }: { canWrite: boolean }) {
     isLoading: isLoadingSummary,
     refetch: refetchSummary,
   } = useApiQuery(
-    (signal) => salesService.summary(periodFilters, { signal }),
-    `vendor-sales-summary:${periodPreset}:${periodFilters.from ?? ""}:${periodFilters.to ?? ""}`,
+    (signal) => salesService.summary(summaryFilters, { signal }),
+    `vendor-sales-summary:${summaryQueryKey}`,
   );
 
   const clients = useMemo(
@@ -365,13 +395,13 @@ export function SalesVendorDashboard({ canWrite }: { canWrite: boolean }) {
     page: clientsPage,
     totalItems: clientsTotalItems,
     setPage: setClientsPage,
-  } = usePagination(clients, { resetKey: periodPreset });
+  } = usePagination(clients, { resetKey: clientQueryKey });
   const {
     pageItems: salePageItems,
     page: salesPage,
     totalItems: salesTotalItems,
     setPage: setSalesPage,
-  } = usePagination(recentSales, { resetKey: periodPreset });
+  } = usePagination(recentSales, { resetKey: clientQueryKey });
 
   const error = salesError ?? summaryError;
   const isLoading = isLoadingSales || isLoadingSummary;
@@ -384,8 +414,15 @@ export function SalesVendorDashboard({ canWrite }: { canWrite: boolean }) {
       : null;
 
   function refetchAll() {
+    refetchPackages();
     refetchSales();
     refetchSummary();
+  }
+
+  function clearFilters() {
+    setPeriodPreset("thisMonth");
+    setPackageId("");
+    setPaymentMethod("");
   }
 
   return (
@@ -394,31 +431,98 @@ export function SalesVendorDashboard({ canWrite }: { canWrite: boolean }) {
         <CardHeader>
           <CardTitle className="text-base">Resumo das minhas vendas</CardTitle>
           <CardDescription>
-            A carteira de clientes considera todo o histórico de vendas; o
-            resumo abaixo segue o período selecionado.
+            A carteira de clientes considera todo o histórico de vendas, com os
+            filtros de pacote e forma de pagamento; o resumo abaixo também
+            segue o período selecionado.
           </CardDescription>
         </CardHeader>
-        <CardContent>
-          <Field className="max-w-xs">
-            <FieldLabel htmlFor="vendor-sales-period">Período</FieldLabel>
-            <Select
-              value={periodPreset}
-              onValueChange={(value) =>
-                setPeriodPreset(value as PeriodPreset)
-              }
-            >
-              <SelectTrigger id="vendor-sales-period" className="h-11 w-full">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {PERIOD_OPTIONS.map((option) => (
-                  <SelectItem key={option.value} value={option.value}>
-                    {option.label}
+        <CardContent className="space-y-4">
+          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+            <Field>
+              <FieldLabel htmlFor="vendor-sales-period">Período</FieldLabel>
+              <Select
+                value={periodPreset}
+                onValueChange={(value) =>
+                  setPeriodPreset(value as PeriodPreset)
+                }
+              >
+                <SelectTrigger id="vendor-sales-period" className="h-11 w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {PERIOD_OPTIONS.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </Field>
+            <Field>
+              <FieldLabel htmlFor="vendor-sales-package">Pacote</FieldLabel>
+              <Select
+                value={packageId || ALL_PACKAGES}
+                onValueChange={(value) =>
+                  setPackageId(value === ALL_PACKAGES ? "" : value)
+                }
+                disabled={isLoadingPackages}
+              >
+                <SelectTrigger id="vendor-sales-package" className="h-11 w-full">
+                  <SelectValue placeholder="Todos os pacotes" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={ALL_PACKAGES}>Todos os pacotes</SelectItem>
+                  {(packages ?? []).map((pkg) => (
+                    <SelectItem key={pkg.id} value={pkg.id}>
+                      {pkg.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </Field>
+            <Field>
+              <FieldLabel htmlFor="vendor-sales-payment">
+                Forma de pagamento
+              </FieldLabel>
+              <Select
+                value={paymentMethod || ALL_PAYMENT_METHODS}
+                onValueChange={(value) =>
+                  setPaymentMethod(
+                    value === ALL_PAYMENT_METHODS
+                      ? ""
+                      : (value as PaymentMethod),
+                  )
+                }
+              >
+                <SelectTrigger
+                  id="vendor-sales-payment"
+                  className="h-11 w-full"
+                >
+                  <SelectValue placeholder="Todas as formas" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={ALL_PAYMENT_METHODS}>
+                    Todas as formas
                   </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </Field>
+                  {PAYMENT_METHOD_OPTIONS.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </Field>
+          </div>
+          {hasFilters && (
+            <Button
+              type="button"
+              size="sm"
+              variant="ghost"
+              onClick={clearFilters}
+            >
+              Limpar filtros
+            </Button>
+          )}
         </CardContent>
       </Card>
 

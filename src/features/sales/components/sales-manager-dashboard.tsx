@@ -33,13 +33,16 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { PatientCombobox } from "@/features/appointments/components/patient-combobox";
 import { formatCurrency, SaleCard } from "@/features/sales/components/sale-card";
+import { PAYMENT_METHOD_OPTIONS } from "@/features/sales/utils";
 import { useApiQuery, usePagination } from "@/hooks";
 import { toEndOfDayIso, toStartOfDayIso } from "@/lib/format/date";
-import { citiesService, salesService } from "@/services";
-import type { SaleListFilters } from "@/types";
+import { citiesService, packagesService, salesService } from "@/services";
+import type { PaymentMethod, SaleListFilters } from "@/types";
 
 const ALL_CITIES = "all";
 const ALL_CONSULTANTS = "all";
+const ALL_PACKAGES = "all";
+const ALL_PAYMENT_METHODS = "all";
 
 function getDateInputValue(date: Date): string {
   const year = date.getFullYear();
@@ -112,6 +115,8 @@ export function SalesManagerDashboard({ canWrite }: { canWrite: boolean }) {
   const [cityId, setCityId] = useState("");
   const [consultantId, setConsultantId] = useState("");
   const [patientId, setPatientId] = useState("");
+  const [packageId, setPackageId] = useState("");
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod | "">("");
 
   const from = toStartOfDayIso(period.from) ?? "";
   const to = toEndOfDayIso(period.to) ?? "";
@@ -120,10 +125,12 @@ export function SalesManagerDashboard({ canWrite }: { canWrite: boolean }) {
     patientId: patientId || undefined,
     cityId: cityId || undefined,
     consultantId: consultantId || undefined,
+    packageId: packageId || undefined,
+    paymentMethod: paymentMethod || undefined,
     from: from || undefined,
     to: to || undefined,
   };
-  const queryKey = `${period.from}:${period.to}:${cityId}:${consultantId}:${patientId}`;
+  const queryKey = `${period.from}:${period.to}:${cityId}:${consultantId}:${patientId}:${packageId}:${paymentMethod}`;
 
   const {
     data: cities,
@@ -138,6 +145,15 @@ export function SalesManagerDashboard({ canWrite }: { canWrite: boolean }) {
   } = useApiQuery(
     (signal) => salesService.consultants({ signal }),
     "manager-sales-consultants",
+  );
+
+  const {
+    data: packages,
+    isLoading: isLoadingPackages,
+    refetch: refetchPackages,
+  } = useApiQuery(
+    (signal) => packagesService.list({ signal }),
+    "manager-sales-packages",
   );
 
   const {
@@ -169,10 +185,17 @@ export function SalesManagerDashboard({ canWrite }: { canWrite: boolean }) {
       ),
     [cities],
   );
+  const packageOptions = useMemo(
+    () =>
+      [...(packages ?? [])].sort((a, b) =>
+        a.name.localeCompare(b.name, "pt-BR"),
+      ),
+    [packages],
+  );
 
   const error = salesError ?? summaryError;
   const isLoading = isLoadingSales || isLoadingSummary;
-  const hasFilters = Boolean(cityId || consultantId || patientId);
+  const hasFilters = Boolean(cityId || consultantId || patientId || packageId || paymentMethod);
   const averageTicket =
     summary && summary.salesCount > 0
       ? String(Number(summary.revenue) / summary.salesCount)
@@ -187,6 +210,7 @@ export function SalesManagerDashboard({ canWrite }: { canWrite: boolean }) {
   function refetchAll() {
     refetchCities();
     refetchConsultants();
+    refetchPackages();
     refetchSales();
     refetchSummary();
   }
@@ -196,6 +220,8 @@ export function SalesManagerDashboard({ canWrite }: { canWrite: boolean }) {
     setCityId("");
     setConsultantId("");
     setPatientId("");
+    setPackageId("");
+    setPaymentMethod("");
   }
 
   return (
@@ -205,7 +231,7 @@ export function SalesManagerDashboard({ canWrite }: { canWrite: boolean }) {
           <CardTitle className="text-base">Filtros do dashboard</CardTitle>
           <CardDescription>
             Consulte quantidade de vendas e faturamento por cidade, consultora,
-            cliente e período.
+            cliente, pacote, forma de pagamento e período.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -292,6 +318,60 @@ export function SalesManagerDashboard({ canWrite }: { canWrite: boolean }) {
                   {(consultants ?? []).map((consultant) => (
                     <SelectItem key={consultant.id} value={consultant.id}>
                       {consultant.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </Field>
+            <Field>
+              <FieldLabel htmlFor="sales-report-package">Pacote</FieldLabel>
+              <Select
+                value={packageId || ALL_PACKAGES}
+                onValueChange={(value) =>
+                  setPackageId(value === ALL_PACKAGES ? "" : value)
+                }
+                disabled={isLoadingPackages}
+              >
+                <SelectTrigger id="sales-report-package" className="h-11 w-full">
+                  <SelectValue placeholder="Todos os pacotes" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={ALL_PACKAGES}>Todos os pacotes</SelectItem>
+                  {packageOptions.map((pkg) => (
+                    <SelectItem key={pkg.id} value={pkg.id}>
+                      {pkg.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </Field>
+            <Field>
+              <FieldLabel htmlFor="sales-report-payment">
+                Forma de pagamento
+              </FieldLabel>
+              <Select
+                value={paymentMethod || ALL_PAYMENT_METHODS}
+                onValueChange={(value) =>
+                  setPaymentMethod(
+                    value === ALL_PAYMENT_METHODS
+                      ? ""
+                      : (value as PaymentMethod),
+                  )
+                }
+              >
+                <SelectTrigger
+                  id="sales-report-payment"
+                  className="h-11 w-full"
+                >
+                  <SelectValue placeholder="Todas as formas" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={ALL_PAYMENT_METHODS}>
+                    Todas as formas
+                  </SelectItem>
+                  {PAYMENT_METHOD_OPTIONS.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -435,7 +515,8 @@ export function SalesManagerDashboard({ canWrite }: { canWrite: boolean }) {
                 <div className="space-y-1">
                   <p className="font-medium">Nenhuma venda encontrada</p>
                   <p className="text-sm text-muted-foreground">
-                    Ajuste os filtros de cidade, cliente ou período.
+                    Ajuste os filtros de cidade, cliente, pacote, pagamento ou
+                    período.
                   </p>
                 </div>
               </div>

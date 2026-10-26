@@ -1,5 +1,14 @@
 import type { AuditFields } from "./common";
 
+export const PAYMENT_METHODS = [
+  "especie",
+  "pix",
+  "cartao_credito",
+  "cartao_debito",
+] as const;
+
+export type PaymentMethod = (typeof PAYMENT_METHODS)[number];
+
 export interface SaleAreaBalance {
   areaId: string;
   areaName: string;
@@ -39,6 +48,7 @@ export interface Sale extends AuditFields {
   consultantId: string | null;
   value: string;
   discount: string | null;
+  paymentMethod: PaymentMethod;
   patient: SalePatientSummary | null;
   city: SaleCitySummary | null;
   consultant: SaleConsultantSummary | null;
@@ -50,6 +60,8 @@ export interface SaleListFilters {
   patientId?: string;
   cityId?: string;
   consultantId?: string;
+  packageId?: string;
+  paymentMethod?: PaymentMethod;
   from?: string;
   to?: string;
 }
@@ -66,11 +78,13 @@ export interface CreateSaleInput {
   packageId: string;
   value: string;
   discount?: string;
+  paymentMethod: PaymentMethod;
 }
 
 export interface UpdateSaleInput {
   value?: string;
   discount?: string | null;
+  paymentMethod?: PaymentMethod;
 }
 
 export interface SaleOpportunityArea {

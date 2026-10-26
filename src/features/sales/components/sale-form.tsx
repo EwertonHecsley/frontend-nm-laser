@@ -35,6 +35,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { PatientCombobox } from "@/features/appointments/components/patient-combobox";
 import { saleFormSchema, type SaleFormValues } from "@/features/sales/schemas";
+import { PAYMENT_METHOD_OPTIONS } from "@/features/sales/utils";
 import { useApiQuery } from "@/hooks";
 import {
   formatCurrency,
@@ -42,7 +43,7 @@ import {
 } from "@/lib/format/currency";
 import { getErrorMessage } from "@/lib/http/errors";
 import { packagesService, salesService } from "@/services";
-import type { Role } from "@/types";
+import type { PaymentMethod, Role } from "@/types";
 
 interface SaleFormProps {
   mode: "create" | "edit";
@@ -95,6 +96,7 @@ export function SaleForm({
       packageId: "",
       value: "",
       discount: "",
+      paymentMethod: "",
     },
   });
 
@@ -134,6 +136,7 @@ export function SaleForm({
         packageId: sale.packageId ?? "",
         value: sale.value,
         discount: sale.discount ?? "",
+        paymentMethod: sale.paymentMethod,
       });
     }
   }, [sale, reset]);
@@ -163,6 +166,7 @@ export function SaleForm({
         await salesService.update(saleId, {
           value: normalizedValue,
           discount: discount ?? null,
+          paymentMethod: values.paymentMethod as PaymentMethod,
         });
         toast.success("Venda atualizada.");
         router.push(
@@ -174,6 +178,7 @@ export function SaleForm({
           packageId: values.packageId,
           value: normalizedValue,
           discount,
+          paymentMethod: values.paymentMethod as PaymentMethod,
         });
         toast.success("Venda registrada.");
         router.push(
@@ -232,9 +237,9 @@ export function SaleForm({
         <CardDescription>
           {isEdit
             ? isManager
-              ? "Atualize o valor ou o desconto da venda."
+              ? "Atualize o valor, o desconto ou a forma de pagamento da venda."
               : "Atualize o desconto da venda dentro do limite permitido pela gestora."
-            : "O valor é definido automaticamente pelo preço do pacote. A consultora pode apenas informar um desconto dentro do limite permitido."}
+            : "O valor é definido automaticamente pelo preço do pacote. Informe a forma de pagamento e, se necessário, um desconto dentro do limite permitido."}
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -346,6 +351,41 @@ export function SaleForm({
                     : "Como gestora, você pode ajustar o valor desta venda."}
                 </FieldDescription>
               )}
+            </Field>
+
+            <Field
+              className="sm:col-span-2"
+              data-invalid={Boolean(errors.paymentMethod)}
+            >
+              <FieldLabel htmlFor="sale-payment-method">
+                Forma de pagamento
+              </FieldLabel>
+              <Controller
+                control={control}
+                name="paymentMethod"
+                render={({ field }) => (
+                  <Select
+                    value={field.value || undefined}
+                    onValueChange={field.onChange}
+                  >
+                    <SelectTrigger
+                      id="sale-payment-method"
+                      className="h-11 w-full"
+                      aria-invalid={Boolean(errors.paymentMethod)}
+                    >
+                      <SelectValue placeholder="Selecione a forma de pagamento" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {PAYMENT_METHOD_OPTIONS.map((option) => (
+                        <SelectItem key={option.value} value={option.value}>
+                          {option.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              />
+              <FieldError errors={[errors.paymentMethod]} />
             </Field>
 
             <Field data-invalid={Boolean(errors.discount)}>

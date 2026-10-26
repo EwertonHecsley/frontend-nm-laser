@@ -22,14 +22,25 @@ import {
 } from "@/components/ui/card";
 import { Field, FieldLabel } from "@/components/ui/field";
 import { Pagination } from "@/components/ui/pagination";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { PatientCombobox } from "@/features/appointments/components/patient-combobox";
 import { SaleCard } from "@/features/sales/components/sale-card";
 import { SalesManagerDashboard } from "@/features/sales/components/sales-manager-dashboard";
 import { SalesVendorDashboard } from "@/features/sales/components/sales-vendor-dashboard";
+import { PAYMENT_METHOD_OPTIONS } from "@/features/sales/utils";
 import { useApiQuery, usePagination } from "@/hooks";
-import { salesService } from "@/services";
-import type { Role } from "@/types";
+import { packagesService, salesService } from "@/services";
+import type { PaymentMethod, SaleListFilters, Role } from "@/types";
+
+const ALL_PACKAGES = "all";
+const ALL_PAYMENT_METHODS = "all";
 
 function PatientSalesSection({
   initialPatientId,
@@ -39,11 +50,24 @@ function PatientSalesSection({
   canWrite: boolean;
 }) {
   const [patientId, setPatientId] = useState(initialPatientId);
+  const [packageId, setPackageId] = useState("");
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod | "">("");
+
+  const filters: SaleListFilters = {
+    patientId: patientId || undefined,
+    packageId: packageId || undefined,
+    paymentMethod: paymentMethod || undefined,
+  };
 
   const { data, error, isLoading, refetch } = useApiQuery(
-    (signal) => salesService.listByPatient(patientId, { signal }),
-    `sales:${patientId}`,
+    (signal) => salesService.list(filters, { signal }),
+    `sales:${patientId}:${packageId}:${paymentMethod}`,
     { enabled: Boolean(patientId) },
+  );
+
+  const { data: packages, isLoading: isLoadingPackages } = useApiQuery(
+    (signal) => packagesService.list({ signal }),
+    "patient-sales-packages",
   );
 
   const sales = useMemo(
@@ -56,7 +80,7 @@ function PatientSalesSection({
   );
 
   const { pageItems, page, totalItems, setPage } = usePagination(sales, {
-    resetKey: patientId,
+    resetKey: `${patientId}:${packageId}:${paymentMethod}`,
   });
 
   return (
@@ -65,18 +89,75 @@ function PatientSalesSection({
         <CardHeader>
           <CardTitle className="text-base">Paciente</CardTitle>
           <CardDescription>
-            Selecione a paciente para consultar os pacotes contratados.
+            Selecione a paciente e refine por pacote ou forma de pagamento.
           </CardDescription>
         </CardHeader>
-        <CardContent className="max-w-xl">
-          <Field>
-            <FieldLabel htmlFor="sale-patient-filter">Paciente</FieldLabel>
-            <PatientCombobox
-              id="sale-patient-filter"
-              value={patientId}
-              onChange={setPatientId}
-            />
-          </Field>
+        <CardContent className="space-y-4">
+          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+            <Field>
+              <FieldLabel htmlFor="sale-patient-filter">Paciente</FieldLabel>
+              <PatientCombobox
+                id="sale-patient-filter"
+                value={patientId}
+                onChange={setPatientId}
+              />
+            </Field>
+            <Field>
+              <FieldLabel htmlFor="sale-package-filter">Pacote</FieldLabel>
+              <Select
+                value={packageId || ALL_PACKAGES}
+                onValueChange={(value) =>
+                  setPackageId(value === ALL_PACKAGES ? "" : value)
+                }
+                disabled={!patientId || isLoadingPackages}
+              >
+                <SelectTrigger id="sale-package-filter" className="h-11 w-full">
+                  <SelectValue placeholder="Todos os pacotes" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={ALL_PACKAGES}>Todos os pacotes</SelectItem>
+                  {(packages ?? []).map((pkg) => (
+                    <SelectItem key={pkg.id} value={pkg.id}>
+                      {pkg.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </Field>
+            <Field>
+              <FieldLabel htmlFor="sale-payment-filter">
+                Forma de pagamento
+              </FieldLabel>
+              <Select
+                value={paymentMethod || ALL_PAYMENT_METHODS}
+                onValueChange={(value) =>
+                  setPaymentMethod(
+                    value === ALL_PAYMENT_METHODS
+                      ? ""
+                      : (value as PaymentMethod),
+                  )
+                }
+                disabled={!patientId}
+              >
+                <SelectTrigger
+                  id="sale-payment-filter"
+                  className="h-11 w-full"
+                >
+                  <SelectValue placeholder="Todas as formas" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={ALL_PAYMENT_METHODS}>
+                    Todas as formas
+                  </SelectItem>
+                  {PAYMENT_METHOD_OPTIONS.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </Field>
+          </div>
         </CardContent>
       </Card>
 

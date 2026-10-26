@@ -15,6 +15,8 @@ function toFiltersQuery(filters: SaleListFilters) {
     patientId: filters.patientId,
     cityId: filters.cityId,
     consultantId: filters.consultantId,
+    packageId: filters.packageId,
+    paymentMethod: filters.paymentMethod,
     from: filters.from,
     to: filters.to,
   };
@@ -28,6 +30,7 @@ function toCreatePayload(input: CreateSaleInput) {
     ...(input.discount
       ? { discount: sanitizeSingleLine(input.discount, 40) }
       : {}),
+    paymentMethod: input.paymentMethod,
   };
 }
 
@@ -42,6 +45,9 @@ function toUpdatePayload(input: UpdateSaleInput) {
             ? sanitizeSingleLine(input.discount, 40)
             : null,
         }
+      : {}),
+    ...(input.paymentMethod
+      ? { paymentMethod: input.paymentMethod }
       : {}),
   };
 }

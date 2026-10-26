@@ -12,6 +12,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { getPaymentMethodLabel } from "@/features/sales/utils";
 import { formatCurrency } from "@/lib/format/currency";
 import { formatDate } from "@/lib/format/date";
 import type { Sale } from "@/types";
@@ -100,6 +101,12 @@ export function SaleCard({
             Consultor:{" "}
             <span className="font-medium text-foreground">
               {sale.consultant?.name ?? "—"}
+            </span>
+          </span>
+          <span>
+            Pagamento:{" "}
+            <span className="font-medium text-foreground">
+              {getPaymentMethodLabel(sale.paymentMethod)}
             </span>
           </span>
           <span>

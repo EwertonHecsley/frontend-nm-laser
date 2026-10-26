@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { PAYMENT_METHODS } from "@/types";
+
 const moneyPattern = /^\d{1,9}([.,]\d{1,2})?$/;
 
 const money = z
@@ -23,6 +25,13 @@ export const saleFormSchema = z.object({
   packageId: z.string().min(1, "Selecione o pacote."),
   value: money,
   discount: optionalMoney,
+  paymentMethod: z
+    .string()
+    .min(1, "Selecione a forma de pagamento.")
+    .refine(
+      (value) => (PAYMENT_METHODS as readonly string[]).includes(value),
+      "Selecione uma forma de pagamento válida.",
+    ),
 });
 
 export type SaleFormValues = z.infer<typeof saleFormSchema>;
