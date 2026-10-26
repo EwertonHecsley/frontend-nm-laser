@@ -7,3 +7,4 @@ export * from "./package";
 export * from "./patient";
 export * from "./sale";
 export * from "./session";
+export * from "./user";

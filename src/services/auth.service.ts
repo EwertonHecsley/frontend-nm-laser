@@ -3,6 +3,7 @@ import { sanitizeEmail } from "@/lib/security/sanitize";
 import type {
   AuthSessionResponse,
   AuthUser,
+  ChangePasswordInput,
   LoginInput,
 } from "@/types";
 
@@ -25,6 +26,10 @@ export const authService = {
 
   async logout(): Promise<void> {
     await http.post<void>("api/auth/logout");
+  },
+
+  async changePassword(input: ChangePasswordInput): Promise<void> {
+    await http.post<void>("api/auth/change-password", input);
   },
 
   async getSession(options?: { signal?: AbortSignal }): Promise<AuthUser> {

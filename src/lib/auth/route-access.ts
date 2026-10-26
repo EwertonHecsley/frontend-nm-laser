@@ -10,6 +10,7 @@ interface RouteAccessRule {
  * autorização; o proxy apenas evita renderizar telas de escrita sem perfil.
  */
 const ROUTE_ACCESS_RULES: readonly RouteAccessRule[] = [
+  { pattern: /^\/users(\/.*)?$/, roles: ["gestora"] },
   { pattern: /^\/cities\/new\/?$/, roles: ["gestora"] },
   { pattern: /^\/cities\/[^/]+\/edit\/?$/, roles: ["gestora"] },
   { pattern: /^\/patients\/new\/?$/, roles: ["gestora", "vendas"] },

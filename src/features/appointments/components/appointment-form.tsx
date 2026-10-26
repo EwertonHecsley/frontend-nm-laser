@@ -324,8 +324,8 @@ export function AppointmentForm({
                 <FieldError errors={[errors.professionalId]} />
               ) : (
                 <FieldDescription>
-                  O backend não expõe listagem de usuários; informe o UUID do
-                  profissional ou deixe em branco.
+                  Informe o UUID de um integrante cadastrado em Equipe ou deixe
+                  em branco.
                 </FieldDescription>
               )}
             </Field>

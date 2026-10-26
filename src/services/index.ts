@@ -7,3 +7,4 @@ export * from "./patients.service";
 export * from "./reports.service";
 export * from "./sales.service";
 export * from "./sessions.service";
+export * from "./users.service";

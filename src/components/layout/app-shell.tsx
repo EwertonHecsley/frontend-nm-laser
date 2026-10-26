@@ -12,8 +12,10 @@ import {
   PanelLeftClose,
   PanelLeftOpen,
   ScanLine,
+  Settings,
   Sparkles,
   Users,
+  UsersRound,
   type LucideIcon,
 } from "lucide-react";
 import Link from "next/link";
@@ -41,6 +43,10 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import {
+  hasPermission,
+  type Permission,
+} from "@/lib/auth/permissions";
 import { getRoleLabel } from "@/lib/auth/role-labels";
 import {
   selectSidebarCollapsed,
@@ -54,6 +60,7 @@ interface NavItem {
   label: string;
   href: string;
   icon: LucideIcon;
+  permission?: Permission;
 }
 
 const NAV_ITEMS: readonly NavItem[] = [
@@ -65,6 +72,12 @@ const NAV_ITEMS: readonly NavItem[] = [
   { label: "Agendamentos", href: "/appointments", icon: CalendarDays },
   { label: "Sessões", href: "/sessions", icon: ClipboardList },
   { label: "Vendas", href: "/sales", icon: BadgeDollarSign },
+  {
+    label: "Equipe",
+    href: "/users",
+    icon: UsersRound,
+    permission: "users:read",
+  },
 ];
 
 function isActivePath(pathname: string, href: string): boolean {
@@ -154,6 +167,22 @@ function getPageTitle(pathname: string): string {
 
   if (pathname.startsWith("/sales")) {
     return "Vendas";
+  }
+
+  if (pathname === "/users/new") {
+    return "Novo integrante";
+  }
+
+  if (/^\/users\/[^/]+\/edit$/.test(pathname)) {
+    return "Editar integrante";
+  }
+
+  if (pathname.startsWith("/users")) {
+    return "Equipe";
+  }
+
+  if (pathname.startsWith("/settings")) {
+    return "Configurações";
   }
 
   if (pathname.startsWith("/forbidden")) {
@@ -303,7 +332,11 @@ function SidebarContent({
               Operação
             </p>
           )}
-          {NAV_ITEMS.map((item) => (
+          {NAV_ITEMS.filter(
+            (item) =>
+              !item.permission ||
+              hasPermission(user.role, item.permission),
+          ).map((item) => (
             <NavLink
               key={item.href}
               item={item}
@@ -400,6 +433,13 @@ function UserMenu({
             Perfil: {getRoleLabel(user.role)}
           </span>
         </DropdownMenuLabel>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem asChild>
+          <Link href="/settings">
+            <Settings className="size-4" />
+            Configurações
+          </Link>
+        </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem
           variant="destructive"

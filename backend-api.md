@@ -4,9 +4,16 @@ Base URL: `http://localhost:3030` (configurável via env). Autenticação: JWT B
 
 ## Autenticação
 - POST /auth/login — body `{ email, password }` → `{ accessToken }`.
+- POST /auth/change-password — body `{ currentPassword, newPassword }` (autenticado).
 - Enviar `Authorization: Bearer <token>`.
 
 ## Perfis (roles): gestora, vendas, aplicadora.
+
+### Usuários / Equipe (gestora)
+- GET /users — lista subordinados (`vendas`, `aplicadora`)
+- POST /users `{ name, email, role, password }`
+- GET /users/:id
+- PATCH /users/:id `{ name?, email?, role?, password? }`
 
 ## Módulos e endpoints
 

@@ -408,8 +408,8 @@ export function SessionForm({
                 <FieldError errors={[errors.applicatorId]} />
               ) : (
                 <FieldDescription>
-                  O backend não expõe listagem de usuários; informe o UUID do
-                  aplicador ou deixe em branco.
+                  Informe o UUID de uma aplicadora cadastrada em Equipe ou deixe
+                  em branco.
                 </FieldDescription>
               )}
             </Field>

@@ -9,6 +9,11 @@ export interface LoginResponse {
   accessToken: string;
 }
 
+export interface ChangePasswordInput {
+  currentPassword: string;
+  newPassword: string;
+}
+
 export interface AuthUser {
   id: string;
   email: string;

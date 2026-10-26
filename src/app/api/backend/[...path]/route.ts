@@ -16,7 +16,12 @@ const ALLOWED_RESOURCES = new Set([
   "areas",
   "packages",
   "sales",
+  "users",
 ]);
+
+const READ_PERMISSIONS: Partial<Record<string, Permission>> = {
+  users: "users:read",
+};
 
 const METHOD_PERMISSIONS: Record<
   string,
@@ -51,6 +56,10 @@ const METHOD_PERMISSIONS: Record<
   sales: {
     POST: "sales:write",
     PATCH: "sales:write",
+  },
+  users: {
+    POST: "users:manage",
+    PATCH: "users:manage",
   },
 };
 
@@ -93,7 +102,16 @@ async function handle(
     return jsonError(404, "Recurso não encontrado.");
   }
 
-  if (method !== "GET") {
+  if (method === "GET") {
+    const requiredPermission = READ_PERMISSIONS[resource];
+
+    if (
+      requiredPermission &&
+      !hasPermission(session.role, requiredPermission)
+    ) {
+      return jsonError(403, "Você não tem permissão para executar esta ação.");
+    }
+  } else {
     const requiredPermission = METHOD_PERMISSIONS[resource]?.[method];
 
     if (!requiredPermission) {
