@@ -51,7 +51,11 @@ export default async function NewSalePage({
           </Button>
         }
       />
-      <SaleForm mode="create" initialPatientId={initialPatientId} />
+      <SaleForm
+        mode="create"
+        initialPatientId={initialPatientId}
+        role={user.role}
+      />
     </div>
   );
 }

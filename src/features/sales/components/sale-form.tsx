@@ -36,19 +36,26 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { PatientCombobox } from "@/features/appointments/components/patient-combobox";
 import { saleFormSchema, type SaleFormValues } from "@/features/sales/schemas";
 import { useApiQuery } from "@/hooks";
+import {
+  formatCurrency,
+  parseMoneyInput,
+} from "@/lib/format/currency";
 import { getErrorMessage } from "@/lib/http/errors";
 import { packagesService, salesService } from "@/services";
+import type { Role } from "@/types";
 
 interface SaleFormProps {
   mode: "create" | "edit";
   saleId?: string;
   initialPatientId?: string;
+  role: Role;
 }
 
 export function SaleForm({
   mode,
   saleId = "",
   initialPatientId = "",
+  role,
 }: SaleFormProps) {
   const router = useRouter();
   const isEdit = mode === "edit";
@@ -79,6 +86,7 @@ export function SaleForm({
     handleSubmit,
     reset,
     setError,
+    setValue,
     formState: { errors, isSubmitting },
   } = useForm<SaleFormValues>({
     resolver: zodResolver(saleFormSchema),
@@ -91,10 +99,33 @@ export function SaleForm({
   });
 
   const selectedPackageId = useWatch({ control, name: "packageId" });
+  const watchedValue = useWatch({ control, name: "value" });
+  const watchedDiscount = useWatch({ control, name: "discount" });
   const selectedPackage = useMemo(
     () => (packages ?? []).find((pkg) => pkg.id === selectedPackageId),
     [packages, selectedPackageId],
   );
+  const maxDiscountPercent =
+    selectedPackage?.maxDiscountPercent ??
+    sale?.package?.maxDiscountPercent ??
+    0;
+  const valueAmount = parseMoneyInput(watchedValue ?? "");
+  const maxDiscountAmount = (valueAmount * maxDiscountPercent) / 100;
+  const discountAmount = parseMoneyInput(watchedDiscount ?? "");
+  const discountPercent =
+    valueAmount > 0 ? (discountAmount / valueAmount) * 100 : 0;
+  const isManager = role === "gestora";
+  const valueIsReadOnly = !isEdit || !isManager;
+  const enforceDiscountLimit = role === "vendas";
+
+  useEffect(() => {
+    if (!isEdit && selectedPackage) {
+      setValue("value", selectedPackage.price, {
+        shouldValidate: true,
+        shouldDirty: false,
+      });
+    }
+  }, [isEdit, selectedPackage, setValue]);
 
   useEffect(() => {
     if (sale) {
@@ -108,15 +139,29 @@ export function SaleForm({
   }, [sale, reset]);
 
   async function onSubmit(values: SaleFormValues) {
-    const value = values.value.replace(",", ".");
+    const value = valueIsReadOnly
+      ? (isEdit ? (sale?.value ?? values.value) : (selectedPackage?.price ?? values.value))
+      : values.value;
+    const normalizedValue = value.replace(",", ".");
     const discount = values.discount
       ? values.discount.replace(",", ".")
       : undefined;
 
+    if (enforceDiscountLimit) {
+      const allowed = maxDiscountAmount;
+
+      if (parseMoneyInput(discount ?? "") > allowed + 0.001) {
+        setError("discount", {
+          message: `O desconto máximo permitido é ${formatCurrency(allowed)} (${maxDiscountPercent.toLocaleString("pt-BR", { maximumFractionDigits: 2 })}%).`,
+        });
+        return;
+      }
+    }
+
     try {
       if (isEdit) {
         await salesService.update(saleId, {
-          value,
+          value: normalizedValue,
           discount: discount ?? null,
         });
         toast.success("Venda atualizada.");
@@ -127,7 +172,7 @@ export function SaleForm({
         await salesService.create({
           patientId: values.patientId,
           packageId: values.packageId,
-          value,
+          value: normalizedValue,
           discount,
         });
         toast.success("Venda registrada.");
@@ -186,8 +231,10 @@ export function SaleForm({
         <CardTitle>{isEdit ? "Dados da venda" : "Registrar venda"}</CardTitle>
         <CardDescription>
           {isEdit
-            ? "Atualize o valor ou o desconto da venda."
-            : "Vincule um pacote à paciente para liberar o saldo das sessões. O consultor é registrado automaticamente."}
+            ? isManager
+              ? "Atualize o valor ou o desconto da venda."
+              : "Atualize o desconto da venda dentro do limite permitido pela gestora."
+            : "O valor é definido automaticamente pelo preço do pacote. A consultora pode apenas informar um desconto dentro do limite permitido."}
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -248,7 +295,8 @@ export function SaleForm({
                     <SelectContent>
                       {(packages ?? []).map((pkg) => (
                         <SelectItem key={pkg.id} value={pkg.id}>
-                          {pkg.name} · {pkg.sessionsCount} sessões
+                          {pkg.name} · {pkg.sessionsCount} sessões ·{" "}
+                          {formatCurrency(pkg.price)}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -267,7 +315,7 @@ export function SaleForm({
                         ? selectedPackage.items
                             .map(
                               (item) =>
-                                `${item.areaName} (${item.sessionsCount})`,
+                                `${item.areaName} (${item.sessionsCount}) · ${formatCurrency(item.price)}`,
                             )
                             .join(" · ")
                         : "Selecione o pacote contratado pela paciente."}
@@ -281,16 +329,29 @@ export function SaleForm({
                 id="sale-value"
                 inputMode="decimal"
                 maxLength={40}
-                placeholder="Ex.: 1200,00"
+                placeholder="Definido pelo pacote"
                 className="h-11"
+                readOnly={valueIsReadOnly}
                 aria-invalid={Boolean(errors.value)}
                 {...register("value")}
               />
-              <FieldError errors={[errors.value]} />
+              {errors.value ? (
+                <FieldError errors={[errors.value]} />
+              ) : (
+                <FieldDescription>
+                  {valueIsReadOnly
+                    ? isEdit
+                      ? "Valor definido pelo cadastro do pacote. A consultora não pode alterá-lo."
+                      : "Valor definido automaticamente pelo cadastro do pacote."
+                    : "Como gestora, você pode ajustar o valor desta venda."}
+                </FieldDescription>
+              )}
             </Field>
 
             <Field data-invalid={Boolean(errors.discount)}>
-              <FieldLabel htmlFor="sale-discount">Desconto (opcional)</FieldLabel>
+              <FieldLabel htmlFor="sale-discount">
+                Desconto (opcional)
+              </FieldLabel>
               <Input
                 id="sale-discount"
                 inputMode="decimal"
@@ -300,7 +361,15 @@ export function SaleForm({
                 aria-invalid={Boolean(errors.discount)}
                 {...register("discount")}
               />
-              <FieldError errors={[errors.discount]} />
+              {errors.discount ? (
+                <FieldError errors={[errors.discount]} />
+              ) : (
+                <FieldDescription>
+                  {selectedPackage
+                    ? `Máximo permitido: ${formatCurrency(maxDiscountAmount)} (${maxDiscountPercent.toLocaleString("pt-BR", { maximumFractionDigits: 2 })}%)${discountPercent > 0 ? ` · Aplicado: ${discountPercent.toLocaleString("pt-BR", { maximumFractionDigits: 2 })}%` : ""}.`
+                    : "Selecione o pacote para ver o desconto máximo permitido."}
+                </FieldDescription>
+              )}
             </Field>
           </FieldGroup>
 

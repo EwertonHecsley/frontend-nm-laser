@@ -4,6 +4,7 @@ export interface SaleAreaBalance {
   areaId: string;
   areaName: string;
   sessionsCount: number;
+  price: string;
   used: number;
   remaining: number;
 }
@@ -12,6 +13,8 @@ export interface SalePackageSummary {
   id: string;
   name: string;
   sessionsCount: number;
+  price: string;
+  maxDiscountPercent: number;
 }
 
 export interface SalePatientSummary {

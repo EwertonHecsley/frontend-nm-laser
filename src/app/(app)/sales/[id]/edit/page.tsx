@@ -48,7 +48,7 @@ export default async function EditSalePage({ params }: EditSalePageProps) {
           </Button>
         }
       />
-      <SaleForm mode="edit" saleId={id} />
+      <SaleForm mode="edit" saleId={id} role={user.role} />
     </div>
   );
 }

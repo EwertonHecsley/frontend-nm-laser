@@ -25,6 +25,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useApiQuery } from "@/hooks";
+import { formatCurrency } from "@/lib/format/currency";
 import { packagesService } from "@/services";
 
 export function PackagesView({ canManage }: { canManage: boolean }) {
@@ -58,7 +59,7 @@ export function PackagesView({ canManage }: { canManage: boolean }) {
     <div className="space-y-6">
       <PageHeader
         title="Pacotes"
-        description="Pacotes comercializados e o saldo de sessões por área."
+        description="Pacotes comercializados, preços por área e desconto máximo permitido."
         actions={createAction}
       />
 
@@ -73,8 +74,8 @@ export function PackagesView({ canManage }: { canManage: boolean }) {
             </div>
             <CardDescription>
               {canManage
-                ? "Cadastre pacotes e defina as áreas e sessões incluídas."
-                : "Somente a gestora pode alterar o catálogo de pacotes."}
+                ? "Cadastre pacotes, preços por área e o desconto máximo permitido."
+                : "Somente a gestora pode alterar preços e o catálogo de pacotes."}
             </CardDescription>
           </div>
 
@@ -148,7 +149,10 @@ export function PackagesView({ canManage }: { canManage: boolean }) {
                       <div className="space-y-1">
                         <CardTitle className="text-base">{pkg.name}</CardTitle>
                         <CardDescription>
-                          {pkg.sessionsCount} sessões no total
+                          {pkg.sessionsCount} sessões ·{" "}
+                          <span className="font-medium text-foreground">
+                            {formatCurrency(pkg.price)}
+                          </span>
                         </CardDescription>
                       </div>
                       {canManage && (
@@ -175,11 +179,29 @@ export function PackagesView({ canManage }: { canManage: boolean }) {
                       <div className="flex flex-wrap gap-1.5">
                         {pkg.items.map((item) => (
                           <Badge key={item.areaId} variant="secondary">
-                            {item.areaName} · {item.sessionsCount}
+                            {item.areaName} · {item.sessionsCount} ·{" "}
+                            {formatCurrency(item.price)}
                           </Badge>
                         ))}
                       </div>
                     )}
+                    <div className="mt-3 flex items-center justify-between border-t pt-3 text-xs text-muted-foreground">
+                      <span>
+                        Desconto máximo:{" "}
+                        <span className="font-medium text-foreground">
+                          {pkg.maxDiscountPercent.toLocaleString("pt-BR", {
+                            maximumFractionDigits: 2,
+                          })}
+                          %
+                        </span>
+                      </span>
+                      <span>
+                        Total:{" "}
+                        <span className="font-semibold text-foreground">
+                          {formatCurrency(pkg.price)}
+                        </span>
+                      </span>
+                    </div>
                   </CardContent>
                 </Card>
               ))}

@@ -12,25 +12,11 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { formatCurrency } from "@/lib/format/currency";
 import { formatDate } from "@/lib/format/date";
 import type { Sale } from "@/types";
 
-export function formatCurrency(value: string | null): string {
-  if (!value) {
-    return "—";
-  }
-
-  const amount = Number(value);
-
-  if (Number.isNaN(amount)) {
-    return "—";
-  }
-
-  return new Intl.NumberFormat("pt-BR", {
-    style: "currency",
-    currency: "BRL",
-  }).format(amount);
-}
+export { formatCurrency };
 
 export function SaleCard({
   sale,

@@ -10,16 +10,24 @@ import type {
   UpdatePackageInput,
 } from "@/types";
 
+function normalizeMoney(value: string): string {
+  const amount = Number(value.replace(",", "."));
+
+  return Number.isFinite(amount) ? amount.toFixed(2) : "0.00";
+}
+
 function toItemsPayload(items: PackageItemInput[]) {
   return items.map((item) => ({
     areaId: item.areaId,
     sessionsCount: item.sessionsCount,
+    price: normalizeMoney(item.price),
   }));
 }
 
 function toCreatePayload(input: CreatePackageInput) {
   return {
     name: sanitizeSingleLine(uppercaseText(input.name), 120),
+    maxDiscountPercent: input.maxDiscountPercent,
     items: toItemsPayload(input.items),
   };
 }
@@ -28,6 +36,9 @@ function toUpdatePayload(input: UpdatePackageInput) {
   return {
     ...(input.name !== undefined
       ? { name: sanitizeSingleLine(uppercaseText(input.name), 120) }
+      : {}),
+    ...(input.maxDiscountPercent !== undefined
+      ? { maxDiscountPercent: input.maxDiscountPercent }
       : {}),
     ...(input.items !== undefined ? { items: toItemsPayload(input.items) } : {}),
   };

@@ -12,7 +12,12 @@ import {
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
-import { Controller, useFieldArray, useForm } from "react-hook-form";
+import {
+  Controller,
+  useFieldArray,
+  useForm,
+  useWatch,
+} from "react-hook-form";
 import { toast } from "sonner";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -45,11 +50,19 @@ import {
   type PackageFormValues,
 } from "@/features/packages/schemas";
 import { useApiQuery } from "@/hooks";
+import {
+  formatCurrency,
+  parseMoneyInput,
+} from "@/lib/format/currency";
 import { getErrorMessage } from "@/lib/http/errors";
 import { sanitizeSingleLine } from "@/lib/security/sanitize";
 import { areasService, packagesService } from "@/services";
 
-const createDefaultItem = () => ({ areaId: "", sessionsCount: 10 });
+const createDefaultItem = () => ({
+  areaId: "",
+  sessionsCount: 10,
+  price: "",
+});
 
 interface PackageFormProps {
   mode: "create" | "edit";
@@ -86,7 +99,11 @@ export function PackageForm({ mode, packageId = "" }: PackageFormProps) {
     formState: { errors, isSubmitting },
   } = useForm<PackageFormValues>({
     resolver: zodResolver(packageFormSchema),
-    defaultValues: { name: "", items: [createDefaultItem()] },
+    defaultValues: {
+      name: "",
+      maxDiscountPercent: 0,
+      items: [createDefaultItem()],
+    },
   });
 
   const { fields, append, remove } = useFieldArray({
@@ -94,15 +111,27 @@ export function PackageForm({ mode, packageId = "" }: PackageFormProps) {
     name: "items",
   });
 
+  const watchedItems = useWatch({ control, name: "items" }) ?? [];
+  const totalPrice = watchedItems.reduce(
+    (total, item) => total + parseMoneyInput(item?.price ?? ""),
+    0,
+  );
+  const totalSessions = watchedItems.reduce(
+    (total, item) => total + (Number(item?.sessionsCount) || 0),
+    0,
+  );
+
   useEffect(() => {
     if (pkg) {
       reset({
         name: pkg.name,
+        maxDiscountPercent: pkg.maxDiscountPercent,
         items:
           pkg.items.length > 0
             ? pkg.items.map((item) => ({
                 areaId: item.areaId,
                 sessionsCount: item.sessionsCount,
+                price: item.price,
               }))
             : [createDefaultItem()],
       });
@@ -120,14 +149,24 @@ export function PackageForm({ mode, packageId = "" }: PackageFormProps) {
     const items = values.items.map((item) => ({
       areaId: item.areaId,
       sessionsCount: Number(item.sessionsCount),
+      price: item.price,
     }));
+    const maxDiscountPercent = Number(values.maxDiscountPercent);
 
     try {
       if (isEdit) {
-        await packagesService.update(packageId, { name, items });
+        await packagesService.update(packageId, {
+          name,
+          maxDiscountPercent,
+          items,
+        });
         toast.success("Pacote atualizado.");
       } else {
-        await packagesService.create({ name, items });
+        await packagesService.create({
+          name,
+          maxDiscountPercent,
+          items,
+        });
         toast.success("Pacote cadastrado.");
       }
 
@@ -183,7 +222,8 @@ export function PackageForm({ mode, packageId = "" }: PackageFormProps) {
           {isEdit ? "Dados do pacote" : "Cadastrar pacote"}
         </CardTitle>
         <CardDescription>
-          Defina o nome do pacote e quantas sessões cada área contratada inclui.
+          Defina o nome, o preço de cada área, o total do pacote e o desconto
+          máximo que a consultora pode conceder.
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -206,12 +246,34 @@ export function PackageForm({ mode, packageId = "" }: PackageFormProps) {
             <FieldError errors={[errors.name]} />
           </Field>
 
+          <Field data-invalid={Boolean(errors.maxDiscountPercent)}>
+            <FieldLabel htmlFor="package-max-discount">
+              Desconto máximo permitido (%)
+            </FieldLabel>
+            <Input
+              id="package-max-discount"
+              type="number"
+              min={0}
+              max={100}
+              step={0.01}
+              inputMode="decimal"
+              className="h-11"
+              aria-invalid={Boolean(errors.maxDiscountPercent)}
+              {...register("maxDiscountPercent", { valueAsNumber: true })}
+            />
+            <FieldDescription>
+              A consultora só poderá aplicar descontos até este percentual do
+              valor do pacote.
+            </FieldDescription>
+            <FieldError errors={[errors.maxDiscountPercent]} />
+          </Field>
+
           <div className="space-y-3">
             <div className="flex items-center justify-between gap-3">
               <div>
                 <p className="text-sm font-medium">Áreas do pacote</p>
                 <p className="text-xs text-muted-foreground">
-                  Cada área tem seu próprio saldo de sessões.
+                  Cada área tem seu próprio saldo de sessões e preço.
                 </p>
               </div>
               <Button
@@ -248,7 +310,7 @@ export function PackageForm({ mode, packageId = "" }: PackageFormProps) {
                   return (
                     <div
                       key={field.id}
-                      className="grid gap-3 rounded-lg border p-3 sm:grid-cols-[1fr_150px_auto] sm:items-start"
+                      className="grid gap-3 rounded-lg border p-3 sm:grid-cols-[1fr_110px_150px_auto] sm:items-start"
                     >
                       <Field data-invalid={Boolean(itemErrors?.areaId)}>
                         <FieldLabel htmlFor={`package-area-${index}`}>
@@ -301,6 +363,22 @@ export function PackageForm({ mode, packageId = "" }: PackageFormProps) {
                         <FieldError errors={[itemErrors?.sessionsCount]} />
                       </Field>
 
+                      <Field data-invalid={Boolean(itemErrors?.price)}>
+                        <FieldLabel htmlFor={`package-price-${index}`}>
+                          Preço (R$)
+                        </FieldLabel>
+                        <Input
+                          id={`package-price-${index}`}
+                          inputMode="decimal"
+                          maxLength={40}
+                          placeholder="0,00"
+                          className="h-10"
+                          aria-invalid={Boolean(itemErrors?.price)}
+                          {...register(`items.${index}.price`)}
+                        />
+                        <FieldError errors={[itemErrors?.price]} />
+                      </Field>
+
                       <div className="flex items-end">
                         <Button
                           type="button"
@@ -325,8 +403,22 @@ export function PackageForm({ mode, packageId = "" }: PackageFormProps) {
               </FieldGroup>
             )}
 
+            <div className="flex flex-col gap-1 rounded-lg border bg-muted/40 px-3 py-2 text-sm sm:flex-row sm:items-center sm:justify-between">
+              <span className="text-muted-foreground">
+                Sessões totais:{" "}
+                <span className="font-medium text-foreground">
+                  {totalSessions}
+                </span>
+              </span>
+              <span className="text-muted-foreground">
+                Valor do pacote:{" "}
+                <span className="font-semibold text-foreground">
+                  {formatCurrency(totalPrice)}
+                </span>
+              </span>
+            </div>
             <FieldDescription>
-              O total do pacote é calculado somando as sessões de cada área.
+              O valor do pacote é calculado somando os preços de cada área.
             </FieldDescription>
           </div>
 
