@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/card";
 import { Field, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import { Pagination } from "@/components/ui/pagination";
 import {
   Select,
   SelectContent,
@@ -32,7 +33,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { PatientCombobox } from "@/features/appointments/components/patient-combobox";
 import { formatCurrency, SaleCard } from "@/features/sales/components/sale-card";
-import { useApiQuery } from "@/hooks";
+import { useApiQuery, usePagination } from "@/hooks";
 import { toEndOfDayIso, toStartOfDayIso } from "@/lib/format/date";
 import { citiesService, salesService } from "@/services";
 import type { SaleListFilters } from "@/types";
@@ -176,6 +177,12 @@ export function SalesManagerDashboard({ canWrite }: { canWrite: boolean }) {
     summary && summary.salesCount > 0
       ? String(Number(summary.revenue) / summary.salesCount)
       : null;
+  const {
+    pageItems: salePageItems,
+    page: salesPage,
+    totalItems: salesTotalItems,
+    setPage: setSalesPage,
+  } = usePagination(sales ?? [], { resetKey: queryKey });
 
   function refetchAll() {
     refetchCities();
@@ -434,9 +441,14 @@ export function SalesManagerDashboard({ canWrite }: { canWrite: boolean }) {
               </div>
             ) : (
               <div className="space-y-4">
-                {sales.map((sale) => (
+                {salePageItems.map((sale) => (
                   <SaleCard key={sale.id} sale={sale} canEdit={canWrite} />
                 ))}
+                <Pagination
+                  page={salesPage}
+                  totalItems={salesTotalItems}
+                  onPageChange={setSalesPage}
+                />
               </div>
             )}
           </section>

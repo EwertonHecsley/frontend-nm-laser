@@ -37,6 +37,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Pagination } from "@/components/ui/pagination";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Table,
@@ -46,7 +47,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { useApiQuery } from "@/hooks";
+import { useApiQuery, usePagination } from "@/hooks";
 import { formatDate } from "@/lib/format/date";
 import { getErrorMessage } from "@/lib/http/errors";
 import { citiesService } from "@/services";
@@ -121,6 +122,11 @@ export function CitiesView({ canManage }: { canManage: boolean }) {
       .filter((city) => city.name.toLocaleLowerCase("pt-BR").includes(term))
       .sort((a, b) => a.name.localeCompare(b.name, "pt-BR"));
   }, [data, deferredSearch]);
+
+  const { pageItems, page, totalItems, setPage } = usePagination(
+    filteredCities,
+    { resetKey: deferredSearch },
+  );
 
   async function handleDelete() {
     if (!cityToDelete) {
@@ -269,7 +275,7 @@ export function CitiesView({ canManage }: { canManage: boolean }) {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {filteredCities.map((city) => (
+                    {pageItems.map((city) => (
                       <TableRow key={city.id}>
                         <TableCell>
                           <div className="flex items-center gap-2">
@@ -303,7 +309,7 @@ export function CitiesView({ canManage }: { canManage: boolean }) {
               </div>
 
               <div className="space-y-3 md:hidden">
-                {filteredCities.map((city) => (
+                {pageItems.map((city) => (
                   <Card key={city.id} size="sm">
                     <CardContent className="flex items-start justify-between gap-3">
                       <div className="flex min-w-0 items-start gap-3">
@@ -327,6 +333,11 @@ export function CitiesView({ canManage }: { canManage: boolean }) {
                   </Card>
                 ))}
               </div>
+              <Pagination
+                page={page}
+                totalItems={totalItems}
+                onPageChange={setPage}
+              />
             </>
           )}
         </CardContent>

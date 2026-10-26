@@ -23,8 +23,9 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { Pagination } from "@/components/ui/pagination";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useApiQuery } from "@/hooks";
+import { useApiQuery, usePagination } from "@/hooks";
 import { formatDate } from "@/lib/format/date";
 import { buildWhatsAppHref } from "@/lib/whatsapp";
 import { salesService } from "@/services";
@@ -236,6 +237,11 @@ export function SessionOpportunities({
     return packages;
   }, [filter, packages]);
 
+  const { pageItems, page, totalItems, setPage } = usePagination(
+    filteredPackages,
+    { resetKey: filter },
+  );
+
   return (
     <section aria-labelledby="session-opportunities" className="space-y-3">
       <div className="flex flex-wrap items-end justify-between gap-3">
@@ -357,13 +363,18 @@ export function SessionOpportunities({
             </div>
           ) : (
             <div className="space-y-4">
-              {filteredPackages.map((item) => (
+              {pageItems.map((item) => (
                 <OpportunityCard
                   key={item.saleId}
                   item={item}
                   canSchedule={canSchedule}
                 />
               ))}
+              <Pagination
+                page={page}
+                totalItems={totalItems}
+                onPageChange={setPage}
+              />
             </div>
           )}
         </>

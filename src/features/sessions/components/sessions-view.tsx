@@ -33,6 +33,7 @@ import {
 } from "@/components/ui/card";
 import { Field, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import { Pagination } from "@/components/ui/pagination";
 import {
   Select,
   SelectContent,
@@ -51,14 +52,19 @@ import {
   getSessionStatusLabel,
   shortId,
 } from "@/features/sessions/utils";
-import { useApiQuery } from "@/hooks";
+import { useApiQuery, usePagination } from "@/hooks";
 import {
   formatDateTime,
   toEndOfDayIso,
   toStartOfDayIso,
 } from "@/lib/format/date";
 import { getErrorMessage } from "@/lib/http/errors";
-import { appointmentsService, salesService, sessionsService } from "@/services";
+import {
+  appointmentsService,
+  packagesService,
+  salesService,
+  sessionsService,
+} from "@/services";
 import type {
   Appointment,
   SessionOverviewItem,
@@ -411,6 +417,7 @@ export function SessionsView({
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
   const [status, setStatus] = useState<SessionStatus | "all">("all");
+  const [packageName, setPackageName] = useState("all");
   const [editingSession, setEditingSession] =
     useState<SessionOverviewItem | null>(null);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
@@ -423,14 +430,13 @@ export function SessionsView({
       sessionsService.overview(
         {
           patientId: patientId || undefined,
-          status: status === "all" ? undefined : status,
           from,
           to,
-          limit: 200,
+          limit: 500,
         },
         { signal },
       ),
-    `sessions-overview:${patientId}:${status}:${from ?? ""}:${to ?? ""}`,
+    `sessions-overview:${patientId}:${from ?? ""}:${to ?? ""}`,
   );
 
   const {
@@ -440,6 +446,11 @@ export function SessionsView({
   } = useApiQuery(
     (signal) => appointmentsService.list({}, { signal }),
     "sessions-appointments",
+  );
+
+  const { data: packages } = useApiQuery(
+    (signal) => packagesService.list({ signal }),
+    "sessions-packages",
   );
 
   const editingPatientId = editingSession?.patientId ?? "";
@@ -474,13 +485,75 @@ export function SessionsView({
   );
 
   const stats = data?.stats;
-  const sessions = data?.sessions ?? [];
+  const sessions = useMemo(() => data?.sessions ?? [], [data]);
+  const packageFilteredSessions = useMemo(
+    () =>
+      packageName === "all"
+        ? sessions
+        : sessions.filter((session) => session.packageName === packageName),
+    [packageName, sessions],
+  );
+  const filteredSessions = useMemo(
+    () =>
+      status === "all"
+        ? packageFilteredSessions
+        : packageFilteredSessions.filter(
+            (session) =>
+              (session.status === "in_progress" ||
+              session.status === "cancelled"
+                ? session.status
+                : "completed") === status,
+          ),
+    [packageFilteredSessions, status],
+  );
+  const packageStats = useMemo<SessionOverviewStats | undefined>(() => {
+    if (packageName === "all" || !stats) {
+      return stats;
+    }
+
+    let completed = 0;
+    let inProgress = 0;
+    let cancelled = 0;
+    const patientIds = new Set<string>();
+
+    for (const session of packageFilteredSessions) {
+      patientIds.add(session.patientId);
+
+      if (session.status === "in_progress") {
+        inProgress += 1;
+      } else if (session.status === "cancelled") {
+        cancelled += 1;
+      } else {
+        completed += 1;
+      }
+    }
+
+    return {
+      total: packageFilteredSessions.length,
+      completed,
+      inProgress,
+      cancelled,
+      patients: patientIds.size,
+    };
+  }, [packageFilteredSessions, packageName, stats]);
+  const displayStats = packageStats;
+  const { pageItems, page, totalItems, setPage } = usePagination(
+    filteredSessions,
+    { resetKey: `${patientId}:${status}:${fromDate}:${toDate}:${packageName}` },
+  );
+  const packageOptions = useMemo(
+    () =>
+      [...(packages ?? [])].sort((a, b) =>
+        a.name.localeCompare(b.name, "pt-BR"),
+      ),
+    [packages],
+  );
   const hasFilters = Boolean(
-    patientId || fromDate || toDate || status !== "all",
+    patientId || fromDate || toDate || status !== "all" || packageName !== "all",
   );
   const completionRate =
-    stats && stats.total > 0
-      ? Math.round((stats.completed / stats.total) * 100)
+    displayStats && displayStats.total > 0
+      ? Math.round((displayStats.completed / displayStats.total) * 100)
       : 0;
 
   function clearFilters() {
@@ -488,6 +561,7 @@ export function SessionsView({
     setFromDate("");
     setToDate("");
     setStatus("all");
+    setPackageName("all");
   }
 
   function retry() {
@@ -551,12 +625,12 @@ export function SessionsView({
         <CardHeader>
           <CardTitle className="text-base">Filtros</CardTitle>
           <CardDescription>
-            Refine o painel por paciente, status da sessão e período de
+            Refine o painel por paciente, pacote, status da sessão e período de
             realização.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
             <Field>
               <FieldLabel htmlFor="session-patient">Paciente</FieldLabel>
               <div className="flex gap-2">
@@ -602,6 +676,22 @@ export function SessionsView({
               </Select>
             </Field>
             <Field>
+              <FieldLabel htmlFor="session-package">Pacote</FieldLabel>
+              <Select value={packageName} onValueChange={setPackageName}>
+                <SelectTrigger id="session-package" className="h-11 w-full">
+                  <SelectValue placeholder="Todos os pacotes" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos os pacotes</SelectItem>
+                  {packageOptions.map((pkg) => (
+                    <SelectItem key={pkg.id} value={pkg.name}>
+                      {pkg.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </Field>
+            <Field>
               <FieldLabel htmlFor="session-from">De</FieldLabel>
               <Input
                 id="session-from"
@@ -626,9 +716,9 @@ export function SessionsView({
           </div>
           <div className="flex flex-wrap items-center justify-between gap-2">
             <p className="text-xs text-muted-foreground">
-              {stats
-                ? `${stats.total} ${
-                    stats.total === 1 ? "sessão" : "sessões"
+              {displayStats
+                ? `${displayStats.total} ${
+                    displayStats.total === 1 ? "sessão" : "sessões"
                   } no recorte atual`
                 : "Carregando indicadores…"}
             </p>
@@ -665,7 +755,7 @@ export function SessionsView({
             </Button>
           </AlertDescription>
         </Alert>
-      ) : stats && data ? (
+      ) : displayStats && data ? (
         <>
           <section aria-labelledby="session-kpis" className="space-y-3">
             <h2 id="session-kpis" className="text-lg font-semibold">
@@ -674,7 +764,7 @@ export function SessionsView({
             <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
               <MetricCard
                 label="Total de sessões"
-                value={stats.total}
+                value={displayStats.total}
                 detail="Todos os status do recorte"
                 icon={ClipboardList}
                 active={status === "all"}
@@ -682,7 +772,7 @@ export function SessionsView({
               />
               <MetricCard
                 label="Concluídas"
-                value={stats.completed}
+                value={displayStats.completed}
                 detail={`${completionRate}% de conclusão`}
                 icon={CircleCheck}
                 tone="completed"
@@ -695,7 +785,7 @@ export function SessionsView({
               />
               <MetricCard
                 label="Em andamento"
-                value={stats.inProgress}
+                value={displayStats.inProgress}
                 detail="Aguardando conclusão"
                 icon={Clock}
                 tone="progress"
@@ -708,7 +798,7 @@ export function SessionsView({
               />
               <MetricCard
                 label="Canceladas"
-                value={stats.cancelled}
+                value={displayStats.cancelled}
                 detail="Não consomem saldo do pacote"
                 icon={CircleX}
                 tone="cancelled"
@@ -721,7 +811,7 @@ export function SessionsView({
               />
               <MetricCard
                 label="Pacientes atendidas"
-                value={stats.patients}
+                value={displayStats.patients}
                 detail="Pacientes distintas no recorte"
                 icon={Users}
                 tone="patients"
@@ -729,7 +819,7 @@ export function SessionsView({
             </div>
           </section>
 
-          <StatusDistribution stats={stats} />
+          <StatusDistribution stats={displayStats} />
 
           <section aria-labelledby="session-history" className="space-y-3">
             <div className="flex flex-wrap items-center justify-between gap-2">
@@ -737,12 +827,14 @@ export function SessionsView({
                 Histórico de sessões
               </h2>
               <Badge variant="secondary">
-                {sessions.length}{" "}
-                {sessions.length === 1 ? "sessão listada" : "sessões listadas"}
+                {filteredSessions.length}{" "}
+                {filteredSessions.length === 1
+                  ? "sessão listada"
+                  : "sessões listadas"}
               </Badge>
             </div>
 
-            {sessions.length === 0 ? (
+            {filteredSessions.length === 0 ? (
               <div className="flex flex-col items-center justify-center gap-3 rounded-xl border border-dashed px-4 py-14 text-center">
                 <span className="grid size-12 place-items-center rounded-full bg-muted text-muted-foreground">
                   <CalendarClock className="size-6" aria-hidden="true" />
@@ -782,7 +874,7 @@ export function SessionsView({
               </div>
             ) : (
               <div className="space-y-4">
-                {sessions.map((session) => (
+                {pageItems.map((session) => (
                   <SessionCard
                     key={session.id}
                     session={session}
@@ -799,6 +891,11 @@ export function SessionsView({
                     }
                   />
                 ))}
+                <Pagination
+                  page={page}
+                  totalItems={totalItems}
+                  onPageChange={setPage}
+                />
               </div>
             )}
           </section>

@@ -23,6 +23,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Pagination } from "@/components/ui/pagination";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Table,
@@ -32,7 +33,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { useApiQuery } from "@/hooks";
+import { useApiQuery, usePagination } from "@/hooks";
 import { getRoleLabel } from "@/lib/auth/role-labels";
 import { formatDate } from "@/lib/format/date";
 import { usersService } from "@/services";
@@ -64,6 +65,11 @@ export function UsersView() {
       })
       .sort((a, b) => a.name.localeCompare(b.name, "pt-BR"));
   }, [data, deferredSearch]);
+
+  const { pageItems, page, totalItems, setPage } = usePagination(
+    filteredUsers,
+    { resetKey: deferredSearch },
+  );
 
   return (
     <div className="space-y-6">
@@ -156,53 +162,60 @@ export function UsersView() {
               )}
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Nome</TableHead>
-                    <TableHead>E-mail</TableHead>
-                    <TableHead>Perfil</TableHead>
-                    <TableHead>Cadastro</TableHead>
-                    <TableHead className="text-right">Ações</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredUsers.map((member) => (
-                    <TableRow key={member.id}>
-                      <TableCell className="font-medium">
-                        {member.name}
-                      </TableCell>
-                      <TableCell className="text-muted-foreground">
-                        {member.email}
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="secondary">
-                          {getRoleLabel(member.role)}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-muted-foreground">
-                        {formatDate(member.createdAt)}
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center justify-end">
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon-sm"
-                            asChild
-                            aria-label={`Editar ${member.name}`}
-                          >
-                            <Link href={`/users/${member.id}/edit`}>
-                              <Pencil className="size-4" />
-                            </Link>
-                          </Button>
-                        </div>
-                      </TableCell>
+            <div className="space-y-4">
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Nome</TableHead>
+                      <TableHead>E-mail</TableHead>
+                      <TableHead>Perfil</TableHead>
+                      <TableHead>Cadastro</TableHead>
+                      <TableHead className="text-right">Ações</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                  </TableHeader>
+                  <TableBody>
+                    {pageItems.map((member) => (
+                      <TableRow key={member.id}>
+                        <TableCell className="font-medium">
+                          {member.name}
+                        </TableCell>
+                        <TableCell className="text-muted-foreground">
+                          {member.email}
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="secondary">
+                            {getRoleLabel(member.role)}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-muted-foreground">
+                          {formatDate(member.createdAt)}
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center justify-end">
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon-sm"
+                              asChild
+                              aria-label={`Editar ${member.name}`}
+                            >
+                              <Link href={`/users/${member.id}/edit`}>
+                                <Pencil className="size-4" />
+                              </Link>
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+              <Pagination
+                page={page}
+                totalItems={totalItems}
+                onPageChange={setPage}
+              />
             </div>
           )}
         </CardContent>

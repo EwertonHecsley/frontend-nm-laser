@@ -2,8 +2,6 @@
 
 import {
   AlertTriangle,
-  ChevronLeft,
-  ChevronRight,
   ClipboardList,
   Loader2,
   Pencil,
@@ -40,6 +38,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Pagination } from "@/components/ui/pagination";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Table,
@@ -56,7 +55,7 @@ import { getErrorMessage } from "@/lib/http/errors";
 import { citiesService, patientsService } from "@/services";
 import type { Patient } from "@/types";
 
-const PAGE_SIZE = 10;
+const PAGE_SIZE = 5;
 
 function PatientActions({
   patient,
@@ -160,9 +159,6 @@ export function PatientsView({
   const patients = data?.data ?? [];
   const meta = data?.meta;
   const total = meta?.total ?? 0;
-  const totalPages = meta?.totalPages ?? 0;
-  const rangeStart = total === 0 ? 0 : (page - 1) * PAGE_SIZE + 1;
-  const rangeEnd = Math.min(page * PAGE_SIZE, total);
 
   function handleSearchChange(value: string) {
     setSearch(value);
@@ -394,37 +390,13 @@ export function PatientsView({
             </>
           )}
 
-          {!isLoading && !error && total > 0 && (
-            <div className="flex flex-col gap-3 border-t pt-4 sm:flex-row sm:items-center sm:justify-between">
-              <p className="text-sm text-muted-foreground">
-                Mostrando {rangeStart}–{rangeEnd} de {total}
-              </p>
-              <div className="flex items-center gap-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  disabled={page <= 1}
-                  onClick={() => setPage((current) => Math.max(1, current - 1))}
-                >
-                  <ChevronLeft className="size-4" />
-                  Anterior
-                </Button>
-                <span className="text-sm text-muted-foreground">
-                  Página {page} de {Math.max(totalPages, 1)}
-                </span>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  disabled={page >= totalPages}
-                  onClick={() => setPage((current) => current + 1)}
-                >
-                  Próxima
-                  <ChevronRight className="size-4" />
-                </Button>
-              </div>
-            </div>
+          {!isLoading && !error && (
+            <Pagination
+              page={page}
+              totalItems={total}
+              pageSize={PAGE_SIZE}
+              onPageChange={setPage}
+            />
           )}
         </CardContent>
       </Card>

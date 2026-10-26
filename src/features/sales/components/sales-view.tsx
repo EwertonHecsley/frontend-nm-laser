@@ -21,12 +21,13 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Field, FieldLabel } from "@/components/ui/field";
+import { Pagination } from "@/components/ui/pagination";
 import { Skeleton } from "@/components/ui/skeleton";
 import { PatientCombobox } from "@/features/appointments/components/patient-combobox";
 import { SaleCard } from "@/features/sales/components/sale-card";
 import { SalesManagerDashboard } from "@/features/sales/components/sales-manager-dashboard";
 import { SalesVendorDashboard } from "@/features/sales/components/sales-vendor-dashboard";
-import { useApiQuery } from "@/hooks";
+import { useApiQuery, usePagination } from "@/hooks";
 import { salesService } from "@/services";
 import type { Role } from "@/types";
 
@@ -53,6 +54,10 @@ function PatientSalesSection({
       ),
     [data],
   );
+
+  const { pageItems, page, totalItems, setPage } = usePagination(sales, {
+    resetKey: patientId,
+  });
 
   return (
     <>
@@ -129,9 +134,14 @@ function PatientSalesSection({
         </div>
       ) : (
         <div className="space-y-4">
-          {sales.map((sale) => (
+          {pageItems.map((sale) => (
             <SaleCard key={sale.id} sale={sale} canEdit={canWrite} />
           ))}
+          <Pagination
+            page={page}
+            totalItems={totalItems}
+            onPageChange={setPage}
+          />
         </div>
       )}
     </>

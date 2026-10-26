@@ -27,6 +27,7 @@ import {
 } from "@/components/ui/card";
 import { Field, FieldError, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import { Pagination } from "@/components/ui/pagination";
 import {
   Select,
   SelectContent,
@@ -50,7 +51,7 @@ import {
   isAppointmentConfirmable,
   isUuid,
 } from "@/features/appointments/utils";
-import { useApiQuery, useDebouncedValue } from "@/hooks";
+import { useApiQuery, useDebouncedValue, usePagination } from "@/hooks";
 import { AppointmentProximityBadge, AppointmentProximityFlag } from "@/features/appointments/components/appointment-proximity-flag";
 import {
   formatDateTime,
@@ -222,6 +223,13 @@ export function AppointmentsView({ canWrite }: { canWrite: boolean }) {
         ? appointments
         : appointments.filter((appointment) => appointment.status === status),
     [appointments, status],
+  );
+
+  const { pageItems, page, totalItems, setPage } = usePagination(
+    filteredAppointments,
+    {
+      resetKey: `${fromDate}:${toDate}:${cityId}:${professionalId ?? ""}:${status}`,
+    },
   );
 
   const hasFilters = Boolean(
@@ -472,7 +480,7 @@ export function AppointmentsView({ canWrite }: { canWrite: boolean }) {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {filteredAppointments.map((appointment) => {
+                    {pageItems.map((appointment) => {
                       const patient = patientsById.get(
                         appointment.patientId,
                       );
@@ -576,7 +584,7 @@ export function AppointmentsView({ canWrite }: { canWrite: boolean }) {
               </div>
 
               <div className="space-y-3 lg:hidden">
-                {filteredAppointments.map((appointment) => {
+                {pageItems.map((appointment) => {
                   const patient = patientsById.get(appointment.patientId);
                   const cityName = cityNames.get(appointment.cityId) ?? "—";
                   const whatsappHref = getWhatsAppConfirmationHref(
@@ -673,6 +681,14 @@ export function AppointmentsView({ canWrite }: { canWrite: boolean }) {
                 })}
               </div>
             </>
+          )}
+
+          {!isLoading && !error && (
+            <Pagination
+              page={page}
+              totalItems={totalItems}
+              onPageChange={setPage}
+            />
           )}
         </CardContent>
       </Card>

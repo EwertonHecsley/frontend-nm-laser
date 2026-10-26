@@ -23,6 +23,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Pagination } from "@/components/ui/pagination";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Table,
@@ -32,7 +33,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { useApiQuery } from "@/hooks";
+import { useApiQuery, usePagination } from "@/hooks";
 import { formatDate } from "@/lib/format/date";
 import { areasService } from "@/services";
 
@@ -53,6 +54,11 @@ export function AreasView({ canManage }: { canManage: boolean }) {
       .filter((area) => area.name.toLocaleLowerCase("pt-BR").includes(term))
       .sort((a, b) => a.name.localeCompare(b.name, "pt-BR"));
   }, [data, deferredSearch]);
+
+  const { pageItems, page, totalItems, setPage } = usePagination(
+    filteredAreas,
+    { resetKey: deferredSearch },
+  );
 
   const createAction = canManage ? (
     <Button asChild>
@@ -147,47 +153,56 @@ export function AreasView({ canManage }: { canManage: boolean }) {
               )}
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Área</TableHead>
-                    <TableHead>Criada em</TableHead>
-                    <TableHead className="text-right">Ações</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredAreas.map((area) => (
-                    <TableRow key={area.id}>
-                      <TableCell className="font-medium">{area.name}</TableCell>
-                      <TableCell className="text-muted-foreground">
-                        {formatDate(area.createdAt)}
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center justify-end">
-                          {canManage ? (
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="icon-sm"
-                              asChild
-                              aria-label={`Editar ${area.name}`}
-                            >
-                              <Link href={`/areas/${area.id}/edit`}>
-                                <Pencil className="size-4" />
-                              </Link>
-                            </Button>
-                          ) : (
-                            <span className="text-xs text-muted-foreground">
-                              Somente leitura
-                            </span>
-                          )}
-                        </div>
-                      </TableCell>
+            <div className="space-y-4">
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Área</TableHead>
+                      <TableHead>Criada em</TableHead>
+                      <TableHead className="text-right">Ações</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                  </TableHeader>
+                  <TableBody>
+                    {pageItems.map((area) => (
+                      <TableRow key={area.id}>
+                        <TableCell className="font-medium">
+                          {area.name}
+                        </TableCell>
+                        <TableCell className="text-muted-foreground">
+                          {formatDate(area.createdAt)}
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center justify-end">
+                            {canManage ? (
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon-sm"
+                                asChild
+                                aria-label={`Editar ${area.name}`}
+                              >
+                                <Link href={`/areas/${area.id}/edit`}>
+                                  <Pencil className="size-4" />
+                                </Link>
+                              </Button>
+                            ) : (
+                              <span className="text-xs text-muted-foreground">
+                                Somente leitura
+                              </span>
+                            )}
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+              <Pagination
+                page={page}
+                totalItems={totalItems}
+                onPageChange={setPage}
+              />
             </div>
           )}
         </CardContent>

@@ -24,6 +24,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Field, FieldLabel } from "@/components/ui/field";
+import { Pagination } from "@/components/ui/pagination";
 import {
   Select,
   SelectContent,
@@ -36,7 +37,7 @@ import {
   formatCurrency,
   SaleCard,
 } from "@/features/sales/components/sale-card";
-import { useApiQuery } from "@/hooks";
+import { useApiQuery, usePagination } from "@/hooks";
 import { formatDate } from "@/lib/format/date";
 import { onlyDigits } from "@/lib/security/sanitize";
 import { formatPhone } from "@/features/patients/utils";
@@ -322,7 +323,6 @@ function ClientCard({ client }: { client: VendorClientView }) {
 export function SalesVendorDashboard({ canWrite }: { canWrite: boolean }) {
   const [periodPreset, setPeriodPreset] =
     useState<PeriodPreset>("thisMonth");
-  const [showAllSales, setShowAllSales] = useState(false);
   const periodFilters = useMemo(
     () => getPeriodFilters(periodPreset),
     [periodPreset],
@@ -360,7 +360,18 @@ export function SalesVendorDashboard({ canWrite }: { canWrite: boolean }) {
       ),
     [allSales],
   );
-  const visibleSales = showAllSales ? recentSales : recentSales.slice(0, 5);
+  const {
+    pageItems: clientPageItems,
+    page: clientsPage,
+    totalItems: clientsTotalItems,
+    setPage: setClientsPage,
+  } = usePagination(clients, { resetKey: periodPreset });
+  const {
+    pageItems: salePageItems,
+    page: salesPage,
+    totalItems: salesTotalItems,
+    setPage: setSalesPage,
+  } = usePagination(recentSales, { resetKey: periodPreset });
 
   const error = salesError ?? summaryError;
   const isLoading = isLoadingSales || isLoadingSummary;
@@ -498,45 +509,38 @@ export function SalesVendorDashboard({ canWrite }: { canWrite: boolean }) {
               </div>
             ) : (
               <div className="space-y-4">
-                {clients.map((client) => (
+                {clientPageItems.map((client) => (
                   <ClientCard key={client.id} client={client} />
                 ))}
+                <Pagination
+                  page={clientsPage}
+                  totalItems={clientsTotalItems}
+                  onPageChange={setClientsPage}
+                />
               </div>
             )}
           </section>
 
           {recentSales.length > 0 && (
             <section aria-labelledby="vendor-sales-history" className="space-y-3">
-              <div className="flex flex-wrap items-end justify-between gap-3">
-                <div className="space-y-1">
-                  <h2
-                    id="vendor-sales-history"
-                    className="text-lg font-semibold"
-                  >
-                    Vendas recentes
-                  </h2>
-                  <p className="text-sm text-muted-foreground">
-                    Últimos registros das suas vendas.
-                  </p>
-                </div>
-                {recentSales.length > 5 && (
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="outline"
-                    onClick={() => setShowAllSales((current) => !current)}
-                  >
-                    {showAllSales
-                      ? "Mostrar menos"
-                      : `Ver todas (${recentSales.length})`}
-                  </Button>
-                )}
+              <div className="space-y-1">
+                <h2 id="vendor-sales-history" className="text-lg font-semibold">
+                  Vendas recentes
+                </h2>
+                <p className="text-sm text-muted-foreground">
+                  Últimos registros das suas vendas.
+                </p>
               </div>
 
               <div className="space-y-4">
-                {visibleSales.map((sale) => (
+                {salePageItems.map((sale) => (
                   <SaleCard key={sale.id} sale={sale} canEdit={false} />
                 ))}
+                <Pagination
+                  page={salesPage}
+                  totalItems={salesTotalItems}
+                  onPageChange={setSalesPage}
+                />
               </div>
             </section>
           )}

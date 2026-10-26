@@ -23,8 +23,9 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Pagination } from "@/components/ui/pagination";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useApiQuery } from "@/hooks";
+import { useApiQuery, usePagination } from "@/hooks";
 import { formatCurrency } from "@/lib/format/currency";
 import { packagesService } from "@/services";
 
@@ -45,6 +46,11 @@ export function PackagesView({ canManage }: { canManage: boolean }) {
       .filter((pkg) => pkg.name.toLocaleLowerCase("pt-BR").includes(term))
       .sort((a, b) => a.name.localeCompare(b.name, "pt-BR"));
   }, [data, deferredSearch]);
+
+  const { pageItems, page, totalItems, setPage } = usePagination(
+    filteredPackages,
+    { resetKey: deferredSearch },
+  );
 
   const createAction = canManage ? (
     <Button asChild>
@@ -141,70 +147,77 @@ export function PackagesView({ canManage }: { canManage: boolean }) {
               )}
             </div>
           ) : (
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {filteredPackages.map((pkg) => (
-                <Card key={pkg.id} size="sm" className="h-full">
-                  <CardHeader>
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="space-y-1">
-                        <CardTitle className="text-base">{pkg.name}</CardTitle>
-                        <CardDescription>
-                          {pkg.sessionsCount} sessões ·{" "}
+            <div className="space-y-4">
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                {pageItems.map((pkg) => (
+                  <Card key={pkg.id} size="sm" className="h-full">
+                    <CardHeader>
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="space-y-1">
+                          <CardTitle className="text-base">{pkg.name}</CardTitle>
+                          <CardDescription>
+                            {pkg.sessionsCount} sessões ·{" "}
+                            <span className="font-medium text-foreground">
+                              {formatCurrency(pkg.price)}
+                            </span>
+                          </CardDescription>
+                        </div>
+                        {canManage && (
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="icon-sm"
+                            asChild
+                            aria-label={`Editar ${pkg.name}`}
+                          >
+                            <Link href={`/packages/${pkg.id}/edit`}>
+                              <Pencil className="size-4" />
+                            </Link>
+                          </Button>
+                        )}
+                      </div>
+                    </CardHeader>
+                    <CardContent>
+                      {pkg.items.length === 0 ? (
+                        <p className="text-sm text-muted-foreground">
+                          Pacote sem áreas cadastradas.
+                        </p>
+                      ) : (
+                        <div className="flex flex-wrap gap-1.5">
+                          {pkg.items.map((item) => (
+                            <Badge key={item.areaId} variant="secondary">
+                              {item.areaName} · {item.sessionsCount} ·{" "}
+                              {formatCurrency(item.price)}
+                            </Badge>
+                          ))}
+                        </div>
+                      )}
+                      <div className="mt-3 flex items-center justify-between border-t pt-3 text-xs text-muted-foreground">
+                        <span>
+                          Desconto máximo:{" "}
                           <span className="font-medium text-foreground">
+                            {pkg.maxDiscountPercent.toLocaleString("pt-BR", {
+                              maximumFractionDigits: 2,
+                            })}
+                            %
+                          </span>
+                        </span>
+                        <span>
+                          Total:{" "}
+                          <span className="font-semibold text-foreground">
                             {formatCurrency(pkg.price)}
                           </span>
-                        </CardDescription>
-                      </div>
-                      {canManage && (
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="icon-sm"
-                          asChild
-                          aria-label={`Editar ${pkg.name}`}
-                        >
-                          <Link href={`/packages/${pkg.id}/edit`}>
-                            <Pencil className="size-4" />
-                          </Link>
-                        </Button>
-                      )}
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    {pkg.items.length === 0 ? (
-                      <p className="text-sm text-muted-foreground">
-                        Pacote sem áreas cadastradas.
-                      </p>
-                    ) : (
-                      <div className="flex flex-wrap gap-1.5">
-                        {pkg.items.map((item) => (
-                          <Badge key={item.areaId} variant="secondary">
-                            {item.areaName} · {item.sessionsCount} ·{" "}
-                            {formatCurrency(item.price)}
-                          </Badge>
-                        ))}
-                      </div>
-                    )}
-                    <div className="mt-3 flex items-center justify-between border-t pt-3 text-xs text-muted-foreground">
-                      <span>
-                        Desconto máximo:{" "}
-                        <span className="font-medium text-foreground">
-                          {pkg.maxDiscountPercent.toLocaleString("pt-BR", {
-                            maximumFractionDigits: 2,
-                          })}
-                          %
                         </span>
-                      </span>
-                      <span>
-                        Total:{" "}
-                        <span className="font-semibold text-foreground">
-                          {formatCurrency(pkg.price)}
-                        </span>
-                      </span>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+              <Pagination
+                page={page}
+                totalItems={totalItems}
+                onPageChange={setPage}
+              />
             </div>
           )}
         </CardContent>
