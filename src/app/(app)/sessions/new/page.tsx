@@ -17,7 +17,11 @@ export const metadata = {
 };
 
 interface NewSessionPageProps {
-  searchParams: Promise<{ patientId?: string | string[] }>;
+  searchParams: Promise<{
+    patientId?: string | string[];
+    saleId?: string | string[];
+    groupId?: string | string[];
+  }>;
 }
 
 export default async function NewSessionPage({
@@ -34,11 +38,13 @@ export default async function NewSessionPage({
   }
 
   const params = await searchParams;
-  const rawPatientId = Array.isArray(params.patientId)
-    ? params.patientId[0]
-    : params.patientId;
-  const initialPatientId =
-    rawPatientId && rawPatientId.length <= 128 ? rawPatientId : "";
+  const getParam = (value?: string | string[]) => {
+    const raw = Array.isArray(value) ? value[0] : value;
+    return raw && raw.length <= 128 ? raw : "";
+  };
+  const initialPatientId = getParam(params.patientId);
+  const initialSaleId = getParam(params.saleId);
+  const initialGroupId = getParam(params.groupId);
 
   return (
     <div className="space-y-6">
@@ -47,7 +53,13 @@ export default async function NewSessionPage({
         description="Registre a sessão realizada e os parâmetros técnicos."
         actions={
           <Button variant="outline" asChild>
-            <Link href="/sessions">
+            <Link
+              href={
+                initialGroupId
+                  ? `/sessions/${encodeURIComponent(initialGroupId)}`
+                  : "/sessions"
+              }
+            >
               <ArrowLeft className="size-4" />
               Voltar
             </Link>
@@ -56,6 +68,8 @@ export default async function NewSessionPage({
       />
       <SessionForm
         initialPatientId={initialPatientId}
+        initialSaleId={initialSaleId}
+        initialGroupId={initialGroupId}
         canCreateSale={hasPermission(user.role, "sales:write")}
       />
     </div>

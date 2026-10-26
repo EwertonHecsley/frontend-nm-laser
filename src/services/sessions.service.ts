@@ -2,6 +2,7 @@ import { http } from "@/lib/http/client";
 import { sanitizeMultiline, sanitizeSingleLine } from "@/lib/security/sanitize";
 import type {
   CreateSessionInput,
+  SessionGroupDetail,
   SessionOverview,
   SessionOverviewFilters,
   SessionRecord,
@@ -9,13 +10,18 @@ import type {
 } from "@/types";
 
 function toCreatePayload(input: CreateSessionInput) {
+  const sessionNumber = input.sessionNumber
+    ? sanitizeSingleLine(input.sessionNumber, 40)
+    : "";
+
   return {
     patientId: input.patientId,
-    sessionNumber: sanitizeSingleLine(input.sessionNumber, 40),
     performedAt: input.performedAt,
+    ...(sessionNumber ? { sessionNumber } : {}),
     ...(input.status ? { status: input.status } : { status: "completed" }),
     ...(input.appointmentId ? { appointmentId: input.appointmentId } : {}),
     ...(input.saleId ? { saleId: input.saleId } : {}),
+    ...(input.groupId ? { groupId: input.groupId } : {}),
     ...(input.areaIds?.length
       ? { areaIds: [...new Set(input.areaIds)] }
       : {}),
@@ -132,6 +138,13 @@ export const sessionsService = {
     return http.get<SessionRecord>(`sessions/${encodeURIComponent(id)}`, {
       signal: options?.signal,
     });
+  },
+
+  getGroup(id: string, options?: { signal?: AbortSignal }) {
+    return http.get<SessionGroupDetail>(
+      `sessions/groups/${encodeURIComponent(id)}`,
+      { signal: options?.signal },
+    );
   },
 
   create(input: CreateSessionInput) {

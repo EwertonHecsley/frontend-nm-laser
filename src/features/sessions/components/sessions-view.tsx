@@ -7,7 +7,6 @@ import {
   CircleX,
   ClipboardList,
   Clock,
-  Pencil,
   Plus,
   RefreshCw,
   Users,
@@ -16,8 +15,6 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useMemo, useState } from "react";
-import { toast } from "sonner";
-
 import { cn } from "cn";
 
 import { PageHeader } from "@/components/layout/page-header";
@@ -42,23 +39,16 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
-import { getAppointmentStatusLabel } from "@/features/appointments/utils";
 import { PatientCombobox } from "@/features/appointments/components/patient-combobox";
 import { EditSessionDialog } from "@/features/sessions/components/edit-session-dialog";
+import { SessionGroupCard } from "@/features/sessions/components/session-group-card";
 import { SessionOpportunities } from "@/features/sessions/components/session-opportunities";
 import {
   SESSION_STATUS_OPTIONS,
-  SESSION_STATUS_BADGE_VARIANTS,
-  getSessionStatusLabel,
-  shortId,
+  groupSessionsByMother,
 } from "@/features/sessions/utils";
 import { useApiQuery, usePagination } from "@/hooks";
-import {
-  formatDateTime,
-  toEndOfDayIso,
-  toStartOfDayIso,
-} from "@/lib/format/date";
-import { getErrorMessage } from "@/lib/http/errors";
+import { toEndOfDayIso, toStartOfDayIso } from "@/lib/format/date";
 import {
   appointmentsService,
   packagesService,
@@ -66,185 +56,10 @@ import {
   sessionsService,
 } from "@/services";
 import type {
-  Appointment,
   SessionOverviewItem,
   SessionOverviewStats,
   SessionStatus,
 } from "@/types";
-
-interface TechItemProps {
-  label: string;
-  value: string | null;
-}
-
-function TechItem({ label, value }: TechItemProps) {
-  return (
-    <div className="space-y-0.5">
-      <dt className="text-xs font-medium tracking-wide text-muted-foreground">
-        {label}
-      </dt>
-      <dd className="text-sm">{value?.trim() || "—"}</dd>
-    </div>
-  );
-}
-
-function SessionCard({
-  session,
-  appointment,
-  canWrite,
-  isUpdating,
-  onEdit,
-  onStatusChange,
-}: {
-  session: SessionOverviewItem;
-  appointment?: Appointment;
-  canWrite: boolean;
-  isUpdating: boolean;
-  onEdit: (session: SessionOverviewItem) => void;
-  onStatusChange: (status: SessionStatus) => void;
-}) {
-  const sessionStatus = session.status ?? "completed";
-  const normalizedStatus: SessionStatus =
-    sessionStatus === "in_progress" || sessionStatus === "cancelled"
-      ? sessionStatus
-      : "completed";
-  const badgeVariant =
-    SESSION_STATUS_BADGE_VARIANTS[normalizedStatus] ?? "default";
-  const statusLabel = getSessionStatusLabel(normalizedStatus);
-
-  return (
-    <Card size="sm">
-      <CardHeader>
-        <div className="flex items-start justify-between gap-3">
-          <div className="flex items-center gap-2">
-            <span className="grid size-9 place-items-center rounded-md bg-secondary text-secondary-foreground">
-              <ClipboardList className="size-4" aria-hidden="true" />
-            </span>
-            <div>
-              <CardTitle className="text-base">
-                {session.patient.fullName}
-              </CardTitle>
-              <CardDescription>
-                Sessão {session.sessionNumber} ·{" "}
-                {formatDateTime(session.performedAt)}
-              </CardDescription>
-            </div>
-          </div>
-          <div className="flex flex-wrap items-center justify-end gap-2">
-            {canWrite ? (
-              <Select
-                value={normalizedStatus}
-                onValueChange={(value) =>
-                  onStatusChange(value as SessionStatus)
-                }
-                disabled={isUpdating}
-              >
-                <SelectTrigger
-                  size="sm"
-                  className="w-full min-w-36"
-                  aria-label={`Alterar status da sessão ${session.sessionNumber}`}
-                >
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {SESSION_STATUS_OPTIONS.map((option) => (
-                    <SelectItem key={option.value} value={option.value}>
-                      {option.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            ) : (
-              <Badge variant={badgeVariant}>{statusLabel}</Badge>
-            )}
-            {canWrite && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => onEdit(session)}
-                className="h-8 gap-1.5"
-              >
-                <Pencil className="size-3.5" />
-                <span>Editar</span>
-              </Button>
-            )}
-          </div>
-        </div>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <dl className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          <TechItem label="Potência" value={session.potency} />
-          <TechItem label="Frequência" value={session.frequency} />
-          <TechItem label="Técnica" value={session.technique} />
-          <TechItem
-            label="Energia acumulada"
-            value={session.energyAccumulated}
-          />
-        </dl>
-
-        {(session.packageName || session.areas.length > 0) && (
-          <div className="space-y-1.5">
-            <p className="text-xs font-medium tracking-wide text-muted-foreground">
-              Pacote contratado
-            </p>
-            <p className="text-sm">
-              {session.packageName ?? "Pacote não identificado"}
-            </p>
-            {session.areas.length > 0 && (
-              <div className="flex flex-wrap gap-1.5">
-                {session.areas.map((area) => (
-                  <Badge key={area.id} variant="secondary">
-                    {area.name}
-                  </Badge>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
-
-        {session.observations && (
-          <div className="space-y-1">
-            <p className="text-xs font-medium tracking-wide text-muted-foreground">
-              Observações
-            </p>
-            <p className="whitespace-pre-wrap text-sm">
-              {session.observations}
-            </p>
-          </div>
-        )}
-
-        {session.signature && (
-          <div className="space-y-1">
-            <p className="text-xs font-medium tracking-wide text-muted-foreground">
-              Assinatura
-            </p>
-            <p className="line-clamp-3 break-all whitespace-pre-wrap rounded-lg border bg-muted/40 px-3 py-2 text-xs">
-              {session.signature}
-            </p>
-          </div>
-        )}
-
-        <div className="flex flex-wrap gap-x-6 gap-y-1 text-xs text-muted-foreground">
-          <span>
-            Agendamento:{" "}
-            {appointment ? (
-              <span className="font-mono">
-                {shortId(appointment.id)} (
-                {getAppointmentStatusLabel(appointment.status)})
-              </span>
-            ) : (
-              <span className="font-mono">{shortId(session.appointmentId)}</span>
-            )}
-          </span>
-          <span>
-            Aplicador:{" "}
-            <span className="font-mono">{shortId(session.applicatorId)}</span>
-          </span>
-        </div>
-      </CardContent>
-    </Card>
-  );
-}
 
 function MetricCard({
   label,
@@ -420,7 +235,6 @@ export function SessionsView({
   const [packageName, setPackageName] = useState("all");
   const [editingSession, setEditingSession] =
     useState<SessionOverviewItem | null>(null);
-  const [updatingId, setUpdatingId] = useState<string | null>(null);
 
   const from = toStartOfDayIso(fromDate);
   const to = toEndOfDayIso(toDate);
@@ -465,17 +279,6 @@ export function SessionsView({
     { enabled: Boolean(editingPatientId) },
   );
 
-  const appointmentsById = useMemo(
-    () =>
-      new Map(
-        (appointments ?? []).map((appointment) => [
-          appointment.id,
-          appointment,
-        ]),
-      ),
-    [appointments],
-  );
-
   const editingAppointments = useMemo(
     () =>
       (appointments ?? []).filter(
@@ -493,18 +296,24 @@ export function SessionsView({
         : sessions.filter((session) => session.packageName === packageName),
     [packageName, sessions],
   );
-  const filteredSessions = useMemo(
+  const sessionGroups = useMemo(
+    () => groupSessionsByMother(packageFilteredSessions),
+    [packageFilteredSessions],
+  );
+  const filteredGroups = useMemo(
     () =>
       status === "all"
-        ? packageFilteredSessions
-        : packageFilteredSessions.filter(
-            (session) =>
-              (session.status === "in_progress" ||
-              session.status === "cancelled"
-                ? session.status
-                : "completed") === status,
+        ? sessionGroups
+        : sessionGroups.filter((group) =>
+            group.sessions.some(
+              (session) =>
+                (session.status === "in_progress" ||
+                session.status === "cancelled"
+                  ? session.status
+                  : "completed") === status,
+            ),
           ),
-    [packageFilteredSessions, status],
+    [sessionGroups, status],
   );
   const packageStats = useMemo<SessionOverviewStats | undefined>(() => {
     if (packageName === "all" || !stats) {
@@ -538,7 +347,7 @@ export function SessionsView({
   }, [packageFilteredSessions, packageName, stats]);
   const displayStats = packageStats;
   const { pageItems, page, totalItems, setPage } = usePagination(
-    filteredSessions,
+    filteredGroups,
     { resetKey: `${patientId}:${status}:${fromDate}:${toDate}:${packageName}` },
   );
   const packageOptions = useMemo(
@@ -569,33 +378,6 @@ export function SessionsView({
     refetchAppointments();
     refetchEditingSales();
     setOpportunitiesRefreshKey((current) => current + 1);
-  }
-
-  async function handleStatusChange(
-    session: SessionOverviewItem,
-    nextStatus: SessionStatus,
-  ) {
-    const currentStatus =
-      session.status === "in_progress" || session.status === "cancelled"
-        ? session.status
-        : "completed";
-
-    if (currentStatus === nextStatus) {
-      return;
-    }
-
-    setUpdatingId(session.id);
-    const toastId = toast.loading("Atualizando status da sessão…");
-
-    try {
-      await sessionsService.update(session.id, { status: nextStatus });
-      toast.success("Status da sessão atualizado.", { id: toastId });
-      retry();
-    } catch (updateError) {
-      toast.error(getErrorMessage(updateError), { id: toastId });
-    } finally {
-      setUpdatingId(null);
-    }
   }
 
   const createAction = canWrite ? (
@@ -786,7 +568,7 @@ export function SessionsView({
               <MetricCard
                 label="Em andamento"
                 value={displayStats.inProgress}
-                detail="Aguardando conclusão"
+                detail="Paciente em tratamento no momento"
                 icon={Clock}
                 tone="progress"
                 active={status === "in_progress"}
@@ -823,18 +605,24 @@ export function SessionsView({
 
           <section aria-labelledby="session-history" className="space-y-3">
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <h2 id="session-history" className="text-lg font-semibold">
-                Histórico de sessões
-              </h2>
+              <div className="space-y-1">
+                <h2 id="session-history" className="text-lg font-semibold">
+                  Sessões mãe
+                </h2>
+                <p className="text-sm text-muted-foreground">
+                  Cada agrupamento reúne as sessões individuais de um pacote
+                  contratado.
+                </p>
+              </div>
               <Badge variant="secondary">
-                {filteredSessions.length}{" "}
-                {filteredSessions.length === 1
-                  ? "sessão listada"
-                  : "sessões listadas"}
+                {filteredGroups.length}{" "}
+                {filteredGroups.length === 1
+                  ? "sessão mãe listada"
+                  : "sessões mãe listadas"}
               </Badge>
             </div>
 
-            {filteredSessions.length === 0 ? (
+            {filteredGroups.length === 0 ? (
               <div className="flex flex-col items-center justify-center gap-3 rounded-xl border border-dashed px-4 py-14 text-center">
                 <span className="grid size-12 place-items-center rounded-full bg-muted text-muted-foreground">
                   <CalendarClock className="size-6" aria-hidden="true" />
@@ -842,14 +630,14 @@ export function SessionsView({
                 <div className="space-y-1">
                   <p className="font-medium">
                     {hasFilters
-                      ? "Nenhuma sessão corresponde aos filtros"
-                      : "Nenhuma sessão registrada"}
+                      ? "Nenhuma sessão mãe corresponde aos filtros"
+                      : "Nenhuma sessão mãe registrada"}
                   </p>
                   <p className="text-sm text-muted-foreground">
                     {hasFilters
                       ? "Ajuste o paciente, o período ou o status selecionado."
                       : canWrite
-                        ? "Registre a primeira sessão para começar o acompanhamento."
+                        ? "Registre a primeira sessão para criar a sessão mãe do pacote."
                         : "Ainda não há sessões registradas."}
                   </p>
                 </div>
@@ -874,22 +662,8 @@ export function SessionsView({
               </div>
             ) : (
               <div className="space-y-4">
-                {pageItems.map((session) => (
-                  <SessionCard
-                    key={session.id}
-                    session={session}
-                    appointment={
-                      session.appointmentId
-                        ? appointmentsById.get(session.appointmentId)
-                        : undefined
-                    }
-                    canWrite={canWrite}
-                    isUpdating={updatingId === session.id}
-                    onEdit={setEditingSession}
-                    onStatusChange={(nextStatus) =>
-                      handleStatusChange(session, nextStatus)
-                    }
-                  />
+                {pageItems.map((group) => (
+                  <SessionGroupCard key={group.id} group={group} />
                 ))}
                 <Pagination
                   page={page}

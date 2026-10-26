@@ -45,11 +45,11 @@ export const sessionFormSchema = z
     status: z.enum(["completed", "in_progress", "cancelled"]),
     appointmentId: optionalUuid("Informe um UUID de agendamento válido."),
     saleId: optionalUuid("Informe um UUID de venda válido."),
+    groupId: optionalUuid("Informe um UUID de sessão mãe válido."),
     areaIds: z.array(z.string()),
     sessionNumber: z
       .string()
       .trim()
-      .min(1, "Informe o número da sessão.")
       .max(40, "O número da sessão deve ter no máximo 40 caracteres."),
     performedAt: z
       .string()

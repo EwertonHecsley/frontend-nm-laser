@@ -53,11 +53,15 @@ const NO_APPOINTMENT = "none";
 
 interface SessionFormProps {
   initialPatientId?: string;
+  initialSaleId?: string;
+  initialGroupId?: string;
   canCreateSale?: boolean;
 }
 
 export function SessionForm({
   initialPatientId = "",
+  initialSaleId = "",
+  initialGroupId = "",
   canCreateSale = false,
 }: SessionFormProps) {
   const router = useRouter();
@@ -75,9 +79,10 @@ export function SessionForm({
       patientId: initialPatientId,
       status: "completed",
       appointmentId: "",
-      saleId: "",
+      saleId: initialSaleId,
+      groupId: initialGroupId,
       areaIds: [],
-      sessionNumber: "1",
+      sessionNumber: "",
       performedAt: "",
       applicatorId: "",
       potency: "",
@@ -133,13 +138,14 @@ export function SessionForm({
     const toastId = toast.loading("Registrando sessão…");
 
     try {
-      await sessionsService.create({
+      const created = await sessionsService.create({
         patientId: values.patientId,
         status: values.status,
-        sessionNumber: values.sessionNumber,
+        sessionNumber: values.sessionNumber.trim() || undefined,
         performedAt: new Date(values.performedAt).toISOString(),
         appointmentId: values.appointmentId.trim() || undefined,
         saleId: values.saleId.trim() || undefined,
+        groupId: values.groupId.trim() || undefined,
         areaIds: values.areaIds,
         applicatorId: values.applicatorId.trim() || undefined,
         potency: values.potency || undefined,
@@ -152,7 +158,9 @@ export function SessionForm({
 
       toast.success("Sessão registrada.", { id: toastId });
       router.push(
-        `/sessions?patientId=${encodeURIComponent(values.patientId)}`,
+        created.sessionGroupId
+          ? `/sessions/${encodeURIComponent(created.sessionGroupId)}`
+          : `/sessions?patientId=${encodeURIComponent(values.patientId)}`,
       );
       router.refresh();
     } catch (error) {
@@ -194,6 +202,7 @@ export function SessionForm({
                       field.onChange(patientId);
                       setValue("appointmentId", "");
                       setValue("saleId", "");
+                      setValue("groupId", "");
                       setValue("areaIds", []);
                     }}
                   />
@@ -221,6 +230,9 @@ export function SessionForm({
               onRetrySales={refetchSales}
               onSaleChange={(saleId) => {
                 setValue("saleId", saleId);
+                if (saleId !== initialSaleId) {
+                  setValue("groupId", "");
+                }
                 setValue("areaIds", []);
               }}
               onAreasChange={(areaIds) => setValue("areaIds", areaIds)}
@@ -228,18 +240,25 @@ export function SessionForm({
 
             <Field data-invalid={Boolean(errors.sessionNumber)}>
               <FieldLabel htmlFor="sessionNumber">
-                Número da sessão
+                Número da sessão (opcional)
               </FieldLabel>
               <Input
                 id="sessionNumber"
                 inputMode="numeric"
                 maxLength={40}
-                placeholder="Ex.: 1"
+                placeholder="Automático"
                 className="h-11"
                 aria-invalid={Boolean(errors.sessionNumber)}
                 {...register("sessionNumber")}
               />
-              <FieldError errors={[errors.sessionNumber]} />
+              {errors.sessionNumber ? (
+                <FieldError errors={[errors.sessionNumber]} />
+              ) : (
+                <FieldDescription>
+                  Deixe em branco para numerar automaticamente dentro da
+                  sessão mãe.
+                </FieldDescription>
+              )}
             </Field>
 
             <Field data-invalid={Boolean(errors.performedAt)}>

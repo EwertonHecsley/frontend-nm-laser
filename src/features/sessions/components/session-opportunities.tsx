@@ -119,7 +119,7 @@ function OpportunityCard({
             </CardDescription>
           </div>
           <Badge variant={item.started ? "secondary" : "outline"}>
-            {item.started ? "Em andamento" : "Aguardando 1ª sessão"}
+            {item.started ? "Em aberto" : "Aguardando 1ª sessão"}
           </Badge>
         </div>
       </CardHeader>
@@ -299,11 +299,11 @@ export function SessionOpportunities({
               tone="waiting"
             />
             <SummaryCard
-              label="Em andamento"
+              label="Em aberto"
               value={stats.inProgressPatientsCount}
               detail={`${stats.inProgressCount} ${
                 stats.inProgressCount === 1 ? "pacote" : "pacotes"
-              } em tratamento`}
+              } com sessões a concluir`}
               icon={Boxes}
               tone="progress"
             />
@@ -339,7 +339,7 @@ export function SessionOpportunities({
               variant={filter === "inProgress" ? "default" : "outline"}
               onClick={() => setFilter("inProgress")}
             >
-              Em andamento ({stats.inProgressCount})
+              Em aberto ({stats.inProgressCount})
             </Button>
           </div>
 
