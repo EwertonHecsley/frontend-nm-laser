@@ -54,7 +54,10 @@ export default async function NewSessionPage({
           </Button>
         }
       />
-      <SessionForm initialPatientId={initialPatientId} />
+      <SessionForm
+        initialPatientId={initialPatientId}
+        canCreateSale={hasPermission(user.role, "sales:write")}
+      />
     </div>
   );
 }

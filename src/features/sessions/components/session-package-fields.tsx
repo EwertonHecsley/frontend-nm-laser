@@ -1,7 +1,10 @@
 "use client";
 
+import { RefreshCw } from "lucide-react";
+import Link from "next/link";
 import { useMemo } from "react";
 
+import { Button } from "@/components/ui/button";
 import { Field, FieldDescription, FieldLabel } from "@/components/ui/field";
 import {
   Select,
@@ -20,10 +23,14 @@ interface SessionPackageFieldsProps {
   saleId: string;
   areaIds: string[];
   sales: readonly Sale[];
+  patientSelected: boolean;
   isLoadingSales: boolean;
   salesError?: string | null;
   saleError?: string;
   areasError?: string;
+  canCreateSale?: boolean;
+  newSaleHref?: string;
+  onRetrySales?: () => void;
   onSaleChange: (saleId: string) => void;
   onAreasChange: (areaIds: string[]) => void;
 }
@@ -33,10 +40,14 @@ export function SessionPackageFields({
   saleId,
   areaIds,
   sales,
+  patientSelected,
   isLoadingSales,
   salesError,
   saleError,
   areasError,
+  canCreateSale = false,
+  newSaleHref,
+  onRetrySales,
   onSaleChange,
   onAreasChange,
 }: SessionPackageFieldsProps) {
@@ -45,6 +56,15 @@ export function SessionPackageFields({
     [sales, saleId],
   );
   const availableAreas = selectedSale?.areas ?? [];
+  const hasSales = sales.length > 0;
+
+  const placeholder = isLoadingSales
+    ? "Carregando pacotes…"
+    : !patientSelected
+      ? "Selecione a paciente"
+      : hasSales
+        ? "Selecione o pacote"
+        : "Nenhum pacote disponível";
 
   function toggleArea(areaId: string) {
     onAreasChange(
@@ -61,22 +81,18 @@ export function SessionPackageFields({
           Pacote contratado
         </FieldLabel>
         <Select
-          value={saleId || NO_SALE}
+          value={patientSelected ? saleId || NO_SALE : ""}
           onValueChange={(value) =>
             onSaleChange(value === NO_SALE ? "" : value)
           }
-          disabled={isLoadingSales || sales.length === 0}
+          disabled={!patientSelected || isLoadingSales}
         >
           <SelectTrigger
             id={`${idPrefix}-saleId`}
             className="h-11 w-full"
             aria-invalid={Boolean(saleError)}
           >
-            <SelectValue
-              placeholder={
-                isLoadingSales ? "Carregando pacotes…" : "Nenhum pacote"
-              }
-            />
+            <SelectValue placeholder={placeholder} />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value={NO_SALE}>Sem pacote vinculado</SelectItem>
@@ -95,13 +111,55 @@ export function SessionPackageFields({
         </Select>
         {saleError ? (
           <p className="text-sm text-destructive">{saleError}</p>
+        ) : salesError ? (
+          <div className="space-y-2">
+            <p className="text-sm text-destructive">{salesError}</p>
+            {onRetrySales && (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={onRetrySales}
+              >
+                <RefreshCw className="size-3.5" />
+                Tentar novamente
+              </Button>
+            )}
+          </div>
+        ) : !patientSelected ? (
+          <FieldDescription>
+            Selecione a paciente para carregar os pacotes contratados.
+          </FieldDescription>
+        ) : isLoadingSales ? (
+          <FieldDescription>Carregando pacotes…</FieldDescription>
+        ) : !hasSales ? (
+          <div className="space-y-2">
+            <p className="text-sm text-muted-foreground">
+              Nenhuma venda registrada para esta paciente. Cadastre a venda do
+              pacote para poder selecioná-lo na sessão.
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {canCreateSale && newSaleHref && (
+                <Button type="button" variant="outline" size="sm" asChild>
+                  <Link href={newSaleHref}>Cadastrar venda</Link>
+                </Button>
+              )}
+              {onRetrySales && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={onRetrySales}
+                >
+                  <RefreshCw className="size-3.5" />
+                  Atualizar pacotes
+                </Button>
+              )}
+            </div>
+          </div>
         ) : (
           <FieldDescription>
-            {salesError
-              ? salesError
-              : !isLoadingSales && sales.length === 0
-                ? "Nenhum pacote foi vendido para esta paciente."
-                : "Selecione a venda/pacote contratado pela paciente."}
+            Selecione a venda/pacote contratado pela paciente.
           </FieldDescription>
         )}
       </Field>

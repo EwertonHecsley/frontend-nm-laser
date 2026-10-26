@@ -1,6 +1,12 @@
 import { http } from "@/lib/http/client";
 import { sanitizeMultiline, sanitizeSingleLine } from "@/lib/security/sanitize";
-import type { CreateSessionInput, SessionRecord, UpdateSessionInput } from "@/types";
+import type {
+  CreateSessionInput,
+  SessionOverview,
+  SessionOverviewFilters,
+  SessionRecord,
+  UpdateSessionInput,
+} from "@/types";
 
 function toCreatePayload(input: CreateSessionInput) {
   return {
@@ -101,6 +107,23 @@ export const sessionsService = {
   ) {
     return http.get<SessionRecord[]>("sessions", {
       query: { patientId },
+      signal: options?.signal,
+    });
+  },
+
+  overview(
+    filters: SessionOverviewFilters = {},
+    options?: { signal?: AbortSignal },
+  ) {
+    return http.get<SessionOverview>("sessions/overview", {
+      query: {
+        patientId: filters.patientId,
+        status: filters.status,
+        from: filters.from,
+        to: filters.to,
+        search: filters.search,
+        limit: filters.limit,
+      },
       signal: options?.signal,
     });
   },

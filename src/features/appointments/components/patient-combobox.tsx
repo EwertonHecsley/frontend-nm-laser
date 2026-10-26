@@ -27,6 +27,7 @@ interface PatientComboboxProps {
   value: string;
   invalid?: boolean;
   disabled?: boolean;
+  placeholder?: string;
   onChange: (patientId: string) => void;
 }
 
@@ -35,6 +36,7 @@ export function PatientCombobox({
   value,
   invalid,
   disabled,
+  placeholder = "Selecione a paciente",
   onChange,
 }: PatientComboboxProps) {
   const [open, setOpen] = useState(false);
@@ -60,7 +62,7 @@ export function PatientCombobox({
   const options = results?.data ?? [];
   const label = value
     ? (selectedPatient?.fullName ?? "Paciente selecionada")
-    : "Selecione a paciente";
+    : placeholder;
 
   return (
     <Popover open={open} onOpenChange={setOpen}>

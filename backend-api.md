@@ -32,6 +32,9 @@ Status: scheduled, arrived, performed, missed, rescheduled, cancelled.
 ### Sessões
 - POST /sessions { appointmentId?, saleId?, patientId, areaIds?, sessionNumber, performedAt, applicatorId?, potency?, frequency?, technique?, energyAccumulated?, observations?, signature?, status? }
 - GET /sessions?patientId=
+- GET /sessions/overview?patientId=&status=&from=&to=&search=&limit= — painel consolidado:
+  `{ stats: { total, completed, inProgress, cancelled, patients }, sessions: [{ ...sessão, patient: { id, fullName }, packageName, areas }] }`.
+  Os `stats` ignoram o filtro de status; o filtro de status é aplicado somente à lista.
 - GET /sessions/:id
 - PATCH /sessions/:id { appointmentId?, saleId?, areaIds?, sessionNumber?, performedAt?, applicatorId?, potency?, frequency?, technique?, energyAccumulated?, observations?, signature?, status? }
 Status da sessão: completed, in_progress, cancelled (padrão: completed).

@@ -53,6 +53,9 @@ interface EditSessionDialogProps {
   isLoadingAppointments?: boolean;
   isLoadingSales?: boolean;
   salesError?: string | null;
+  canCreateSale?: boolean;
+  newSaleHref?: string;
+  onRetrySales?: () => void;
   onSuccess: () => void;
 }
 
@@ -65,6 +68,9 @@ export function EditSessionDialog({
   isLoadingAppointments,
   isLoadingSales,
   salesError,
+  canCreateSale = false,
+  newSaleHref,
+  onRetrySales,
   onSuccess,
 }: EditSessionDialogProps) {
   const {
@@ -277,10 +283,14 @@ export function EditSessionDialog({
               saleId={selectedSaleId}
               areaIds={selectedAreaIds}
               sales={sales}
+              patientSelected={Boolean(session.patientId)}
               isLoadingSales={Boolean(isLoadingSales)}
               salesError={salesError}
               saleError={errors.saleId?.message}
               areasError={errors.areaIds?.message}
+              canCreateSale={canCreateSale}
+              newSaleHref={newSaleHref}
+              onRetrySales={onRetrySales}
               onSaleChange={(saleId) => {
                 setValue("saleId", saleId);
                 setValue("areaIds", []);

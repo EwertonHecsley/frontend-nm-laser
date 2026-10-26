@@ -57,3 +57,36 @@ export interface UpdateSessionInput {
   status?: SessionStatus | string;
 }
 
+export interface SessionOverviewPatient {
+  id: string;
+  fullName: string;
+}
+
+export interface SessionOverviewItem extends SessionRecord {
+  patient: SessionOverviewPatient;
+  packageName: string | null;
+}
+
+export interface SessionOverviewStats {
+  total: number;
+  completed: number;
+  inProgress: number;
+  cancelled: number;
+  patients: number;
+}
+
+export interface SessionOverviewFilters {
+  patientId?: string;
+  status?: SessionStatus | string;
+  from?: string;
+  to?: string;
+  search?: string;
+  limit?: number;
+}
+
+export interface SessionOverview {
+  stats: SessionOverviewStats;
+  sessions: SessionOverviewItem[];
+}
+
+

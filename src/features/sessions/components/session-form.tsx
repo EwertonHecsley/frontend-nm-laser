@@ -53,9 +53,13 @@ const NO_APPOINTMENT = "none";
 
 interface SessionFormProps {
   initialPatientId?: string;
+  canCreateSale?: boolean;
 }
 
-export function SessionForm({ initialPatientId = "" }: SessionFormProps) {
+export function SessionForm({
+  initialPatientId = "",
+  canCreateSale = false,
+}: SessionFormProps) {
   const router = useRouter();
 
   const {
@@ -102,6 +106,7 @@ export function SessionForm({ initialPatientId = "" }: SessionFormProps) {
     data: sales,
     isLoading: isLoadingSales,
     error: salesError,
+    refetch: refetchSales,
   } = useApiQuery(
     (signal) => salesService.listByPatient(selectedPatientId, { signal }),
     `session-sales:${selectedPatientId}`,
@@ -202,10 +207,18 @@ export function SessionForm({ initialPatientId = "" }: SessionFormProps) {
               saleId={selectedSaleId}
               areaIds={selectedAreaIds}
               sales={sales ?? []}
+              patientSelected={Boolean(selectedPatientId)}
               isLoadingSales={isLoadingSales}
               salesError={salesError}
               saleError={errors.saleId?.message}
               areasError={errors.areaIds?.message}
+              canCreateSale={canCreateSale}
+              newSaleHref={
+                selectedPatientId
+                  ? `/sales/new?patientId=${encodeURIComponent(selectedPatientId)}`
+                  : undefined
+              }
+              onRetrySales={refetchSales}
               onSaleChange={(saleId) => {
                 setValue("saleId", saleId);
                 setValue("areaIds", []);

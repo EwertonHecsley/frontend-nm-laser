@@ -33,6 +33,7 @@ export default async function SessionsPage({
     <SessionsView
       initialPatientId={initialPatientId}
       canWrite={hasPermission(user.role, "sessions:write")}
+      canCreateSale={hasPermission(user.role, "sales:write")}
     />
   );
 }

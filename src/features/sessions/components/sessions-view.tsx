@@ -3,14 +3,22 @@
 import {
   AlertTriangle,
   CalendarClock,
+  CircleCheck,
+  CircleX,
   ClipboardList,
+  Clock,
   Pencil,
   Plus,
   RefreshCw,
-  UserRound,
+  Users,
+  X,
+  type LucideIcon,
 } from "lucide-react";
 import Link from "next/link";
 import { useMemo, useState } from "react";
+import { toast } from "sonner";
+
+import { cn } from "cn";
 
 import { PageHeader } from "@/components/layout/page-header";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -41,15 +49,19 @@ import {
   SESSION_STATUS_BADGE_VARIANTS,
   getSessionStatusLabel,
   shortId,
-  sortSessionsByPerformedAt,
 } from "@/features/sessions/utils";
 import { useApiQuery } from "@/hooks";
-import { formatDateTime, toDateInputValue } from "@/lib/format/date";
+import {
+  formatDateTime,
+  toEndOfDayIso,
+  toStartOfDayIso,
+} from "@/lib/format/date";
+import { getErrorMessage } from "@/lib/http/errors";
 import { appointmentsService, salesService, sessionsService } from "@/services";
 import type {
   Appointment,
-  Sale,
-  SessionRecord,
+  SessionOverviewItem,
+  SessionOverviewStats,
   SessionStatus,
 } from "@/types";
 
@@ -72,20 +84,26 @@ function TechItem({ label, value }: TechItemProps) {
 function SessionCard({
   session,
   appointment,
-  sale,
   canWrite,
+  isUpdating,
   onEdit,
+  onStatusChange,
 }: {
-  session: SessionRecord;
+  session: SessionOverviewItem;
   appointment?: Appointment;
-  sale?: Sale;
   canWrite: boolean;
-  onEdit: (session: SessionRecord) => void;
+  isUpdating: boolean;
+  onEdit: (session: SessionOverviewItem) => void;
+  onStatusChange: (status: SessionStatus) => void;
 }) {
   const sessionStatus = session.status ?? "completed";
+  const normalizedStatus: SessionStatus =
+    sessionStatus === "in_progress" || sessionStatus === "cancelled"
+      ? sessionStatus
+      : "completed";
   const badgeVariant =
-    SESSION_STATUS_BADGE_VARIANTS[sessionStatus] ?? "default";
-  const statusLabel = getSessionStatusLabel(sessionStatus);
+    SESSION_STATUS_BADGE_VARIANTS[normalizedStatus] ?? "default";
+  const statusLabel = getSessionStatusLabel(normalizedStatus);
 
   return (
     <Card size="sm">
@@ -97,15 +115,41 @@ function SessionCard({
             </span>
             <div>
               <CardTitle className="text-base">
-                Sessão {session.sessionNumber}
+                {session.patient.fullName}
               </CardTitle>
               <CardDescription>
+                Sessão {session.sessionNumber} ·{" "}
                 {formatDateTime(session.performedAt)}
               </CardDescription>
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            <Badge variant={badgeVariant}>{statusLabel}</Badge>
+          <div className="flex flex-wrap items-center justify-end gap-2">
+            {canWrite ? (
+              <Select
+                value={normalizedStatus}
+                onValueChange={(value) =>
+                  onStatusChange(value as SessionStatus)
+                }
+                disabled={isUpdating}
+              >
+                <SelectTrigger
+                  size="sm"
+                  className="w-full min-w-36"
+                  aria-label={`Alterar status da sessão ${session.sessionNumber}`}
+                >
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {SESSION_STATUS_OPTIONS.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            ) : (
+              <Badge variant={badgeVariant}>{statusLabel}</Badge>
+            )}
             {canWrite && (
               <Button
                 variant="outline"
@@ -131,13 +175,13 @@ function SessionCard({
           />
         </dl>
 
-        {(sale || session.areas.length > 0) && (
+        {(session.packageName || session.areas.length > 0) && (
           <div className="space-y-1.5">
             <p className="text-xs font-medium tracking-wide text-muted-foreground">
               Pacote contratado
             </p>
             <p className="text-sm">
-              {sale?.package?.name ?? "Pacote não identificado"}
+              {session.packageName ?? "Pacote não identificado"}
             </p>
             {session.areas.length > 0 && (
               <div className="flex flex-wrap gap-1.5">
@@ -178,7 +222,8 @@ function SessionCard({
             Agendamento:{" "}
             {appointment ? (
               <span className="font-mono">
-                {shortId(appointment.id)} ({getAppointmentStatusLabel(appointment.status)})
+                {shortId(appointment.id)} (
+                {getAppointmentStatusLabel(appointment.status)})
               </span>
             ) : (
               <span className="font-mono">{shortId(session.appointmentId)}</span>
@@ -194,56 +239,217 @@ function SessionCard({
   );
 }
 
-function LoadingState() {
+function MetricCard({
+  label,
+  value,
+  detail,
+  icon: Icon,
+  tone = "default",
+  active = false,
+  onClick,
+}: {
+  label: string;
+  value: number;
+  detail?: string;
+  icon: LucideIcon;
+  tone?: "default" | "completed" | "progress" | "cancelled" | "patients";
+  active?: boolean;
+  onClick?: () => void;
+}) {
+  const tones: Record<typeof tone, string> = {
+    default: "bg-secondary text-secondary-foreground",
+    completed: "bg-emerald-600/10 text-emerald-700",
+    progress: "bg-amber-500/10 text-amber-700",
+    cancelled: "bg-rose-600/10 text-rose-700",
+    patients: "bg-sky-600/10 text-sky-700",
+  };
+
   return (
-    <div className="space-y-3">
-      {Array.from({ length: 3 }).map((_, index) => (
-        <Skeleton key={index} className="h-48 w-full" />
-      ))}
+    <Card
+      className={cn(
+        "relative transition",
+        onClick &&
+          "cursor-pointer hover:ring-primary/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+        active && "ring-2 ring-primary",
+      )}
+      role={onClick ? "button" : undefined}
+      tabIndex={onClick ? 0 : undefined}
+      aria-pressed={onClick ? active : undefined}
+      onClick={onClick}
+      onKeyDown={
+        onClick
+          ? (event) => {
+              if (event.key === "Enter" || event.key === " ") {
+                event.preventDefault();
+                onClick();
+              }
+            }
+          : undefined
+      }
+    >
+      <CardHeader className="flex-row items-start justify-between gap-3">
+        <div className="space-y-1">
+          <CardDescription>{label}</CardDescription>
+          <CardTitle className="text-2xl tabular-nums">{value}</CardTitle>
+        </div>
+        <span
+          className={cn(
+            "grid size-10 place-items-center rounded-lg",
+            tones[tone],
+          )}
+        >
+          <Icon className="size-5" aria-hidden="true" />
+        </span>
+      </CardHeader>
+      {detail && (
+        <CardContent className="text-xs text-muted-foreground">
+          {detail}
+        </CardContent>
+      )}
+    </Card>
+  );
+}
+
+function SessionsSkeleton() {
+  return (
+    <div className="space-y-4">
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
+        {Array.from({ length: 5 }).map((_, index) => (
+          <Skeleton key={index} className="h-28 w-full" />
+        ))}
+      </div>
+      <Skeleton className="h-32 w-full" />
+      <div className="space-y-3">
+        {Array.from({ length: 3 }).map((_, index) => (
+          <Skeleton key={index} className="h-48 w-full" />
+        ))}
+      </div>
     </div>
+  );
+}
+
+function StatusDistribution({ stats }: { stats: SessionOverviewStats }) {
+  const items = [
+    {
+      key: "completed",
+      label: "Concluídas",
+      color: "bg-emerald-600",
+      count: stats.completed,
+    },
+    {
+      key: "in_progress",
+      label: "Em andamento",
+      color: "bg-amber-500",
+      count: stats.inProgress,
+    },
+    {
+      key: "cancelled",
+      label: "Canceladas",
+      color: "bg-rose-600",
+      count: stats.cancelled,
+    },
+  ];
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-base">Distribuição por status</CardTitle>
+        <CardDescription>
+          {stats.total} {stats.total === 1 ? "sessão" : "sessões"} no recorte
+          filtrado.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div
+          className="flex h-3 overflow-hidden rounded-full bg-muted"
+          role="img"
+          aria-label="Distribuição proporcional das sessões por status"
+        >
+          {items.map(({ key, color, count }) => (
+            <span
+              key={key}
+              className={color}
+              style={{
+                width: `${stats.total ? (count / stats.total) * 100 : 0}%`,
+              }}
+            />
+          ))}
+        </div>
+        <ul className="grid gap-3 sm:grid-cols-3">
+          {items.map(({ key, label, color, count }) => (
+            <li
+              key={key}
+              className="flex items-center justify-between gap-2 rounded-lg border px-3 py-2"
+            >
+              <span className="flex items-center gap-2 text-sm text-muted-foreground">
+                <span className={cn("size-2.5 rounded-full", color)} />
+                {label}
+              </span>
+              <span className="text-sm font-medium tabular-nums">{count}</span>
+            </li>
+          ))}
+        </ul>
+      </CardContent>
+    </Card>
   );
 }
 
 export function SessionsView({
   initialPatientId,
   canWrite,
+  canCreateSale = false,
 }: {
   initialPatientId: string;
   canWrite: boolean;
-  }) {
+  canCreateSale?: boolean;
+}) {
   const [patientId, setPatientId] = useState(initialPatientId);
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
   const [status, setStatus] = useState<SessionStatus | "all">("all");
-  const [editingSession, setEditingSession] = useState<SessionRecord | null>(null);
+  const [editingSession, setEditingSession] =
+    useState<SessionOverviewItem | null>(null);
+  const [updatingId, setUpdatingId] = useState<string | null>(null);
+
+  const from = toStartOfDayIso(fromDate);
+  const to = toEndOfDayIso(toDate);
 
   const { data, error, isLoading, refetch } = useApiQuery(
-    (signal) => sessionsService.listByPatient(patientId, { signal }),
-    `sessions:${patientId}`,
-    { enabled: Boolean(patientId) },
+    (signal) =>
+      sessionsService.overview(
+        {
+          patientId: patientId || undefined,
+          status: status === "all" ? undefined : status,
+          from,
+          to,
+          limit: 200,
+        },
+        { signal },
+      ),
+    `sessions-overview:${patientId}:${status}:${from ?? ""}:${to ?? ""}`,
   );
+
   const {
     data: appointments,
-    error: appointmentsError,
     isLoading: appointmentsLoading,
     refetch: refetchAppointments,
   } = useApiQuery(
     (signal) => appointmentsService.list({}, { signal }),
     "sessions-appointments",
-    { enabled: Boolean(patientId) },
-  );
-  const {
-    data: sales,
-    error: salesError,
-    isLoading: salesLoading,
-    refetch: refetchSales,
-  } = useApiQuery(
-    (signal) => salesService.listByPatient(patientId, { signal }),
-    `sessions-sales:${patientId}`,
-    { enabled: Boolean(patientId) },
   );
 
-  const sessions = sortSessionsByPerformedAt(data ?? []);
+  const editingPatientId = editingSession?.patientId ?? "";
+  const {
+    data: editingSales,
+    error: editingSalesError,
+    isLoading: editingSalesLoading,
+    refetch: refetchEditingSales,
+  } = useApiQuery(
+    (signal) => salesService.listByPatient(editingPatientId, { signal }),
+    `sessions-edit-sales:${editingPatientId}`,
+    { enabled: Boolean(editingPatientId) },
+  );
+
   const appointmentsById = useMemo(
     () =>
       new Map(
@@ -254,43 +460,63 @@ export function SessionsView({
       ),
     [appointments],
   );
-  const salesById = useMemo(
-    () => new Map((sales ?? []).map((sale) => [sale.id, sale])),
-    [sales],
-  );
 
-  const patientAppointments = useMemo(
+  const editingAppointments = useMemo(
     () =>
       (appointments ?? []).filter(
-        (appointment) => appointment.patientId === patientId,
+        (appointment) => appointment.patientId === editingPatientId,
       ),
-    [appointments, patientId],
+    [appointments, editingPatientId],
   );
 
-  const filteredSessions = useMemo(
-    () =>
-      sessions.filter((session) => {
-        const sessionDate = toDateInputValue(session.performedAt);
-        const sessionStatus = session.status ?? "completed";
-
-        if (
-          (fromDate && sessionDate < fromDate) ||
-          (toDate && sessionDate > toDate)
-        ) {
-          return false;
-        }
-
-        return status === "all" || sessionStatus === status;
-      }),
-    [fromDate, sessions, status, toDate],
+  const stats = data?.stats;
+  const sessions = data?.sessions ?? [];
+  const hasFilters = Boolean(
+    patientId || fromDate || toDate || status !== "all",
   );
-  const loadError = error ?? appointmentsError;
-  const isLoadingHistory = isLoading || appointmentsLoading || salesLoading;
+  const completionRate =
+    stats && stats.total > 0
+      ? Math.round((stats.completed / stats.total) * 100)
+      : 0;
 
-  function retryHistory() {
+  function clearFilters() {
+    setPatientId("");
+    setFromDate("");
+    setToDate("");
+    setStatus("all");
+  }
+
+  function retry() {
     refetch();
     refetchAppointments();
-    refetchSales();
+    refetchEditingSales();
+  }
+
+  async function handleStatusChange(
+    session: SessionOverviewItem,
+    nextStatus: SessionStatus,
+  ) {
+    const currentStatus =
+      session.status === "in_progress" || session.status === "cancelled"
+        ? session.status
+        : "completed";
+
+    if (currentStatus === nextStatus) {
+      return;
+    }
+
+    setUpdatingId(session.id);
+    const toastId = toast.loading("Atualizando status da sessão…");
+
+    try {
+      await sessionsService.update(session.id, { status: nextStatus });
+      toast.success("Status da sessão atualizado.", { id: toastId });
+      retry();
+    } catch (updateError) {
+      toast.error(getErrorMessage(updateError), { id: toastId });
+    } finally {
+      setUpdatingId(null);
+    }
   }
 
   const createAction = canWrite ? (
@@ -312,57 +538,42 @@ export function SessionsView({
     <div className="space-y-6">
       <PageHeader
         title="Sessões"
-        description="Consulte o histórico de sessões e os parâmetros técnicos registrados por paciente."
+        description="Acompanhe indicadores de atendimento e consulte o histórico de sessões por paciente, status e período."
         actions={createAction}
       />
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Paciente</CardTitle>
+          <CardTitle className="text-base">Filtros</CardTitle>
           <CardDescription>
-            Selecione a paciente para visualizar o histórico de sessões.
+            Refine o painel por paciente, status da sessão e período de
+            realização.
           </CardDescription>
         </CardHeader>
-        <CardContent className="max-w-xl">
-          <Field>
-            <FieldLabel htmlFor="session-patient">Paciente</FieldLabel>
-            <PatientCombobox
-              id="session-patient"
-              value={patientId}
-              onChange={setPatientId}
-            />
-          </Field>
-        </CardContent>
-      </Card>
-
-      {patientId && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Filtros do histórico</CardTitle>
-            <CardDescription>
-              O período considera a data de realização e os filtros por status da sessão.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="grid gap-4 sm:grid-cols-3">
+        <CardContent className="space-y-4">
+          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
             <Field>
-              <FieldLabel htmlFor="session-from">De</FieldLabel>
-              <Input
-                id="session-from"
-                type="date"
-                value={fromDate}
-                max={toDate || undefined}
-                onChange={(event) => setFromDate(event.target.value)}
-              />
-            </Field>
-            <Field>
-              <FieldLabel htmlFor="session-to">Até</FieldLabel>
-              <Input
-                id="session-to"
-                type="date"
-                value={toDate}
-                min={fromDate || undefined}
-                onChange={(event) => setToDate(event.target.value)}
-              />
+              <FieldLabel htmlFor="session-patient">Paciente</FieldLabel>
+              <div className="flex gap-2">
+                <PatientCombobox
+                  id="session-patient"
+                  value={patientId}
+                  placeholder="Todas as pacientes"
+                  onChange={setPatientId}
+                />
+                {patientId && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    className="h-11 w-11 shrink-0"
+                    onClick={() => setPatientId("")}
+                    aria-label="Remover filtro de paciente"
+                  >
+                    <X className="size-4" />
+                  </Button>
+                )}
+              </div>
             </Field>
             <Field>
               <FieldLabel htmlFor="session-status">Status da sessão</FieldLabel>
@@ -372,7 +583,7 @@ export function SessionsView({
                   setStatus(value as SessionStatus | "all")
                 }
               >
-                <SelectTrigger id="session-status" className="w-full">
+                <SelectTrigger id="session-status" className="h-11 w-full">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -385,86 +596,204 @@ export function SessionsView({
                 </SelectContent>
               </Select>
             </Field>
-          </CardContent>
-        </Card>
-      )}
-
-      {!patientId ? (
-        <div className="flex flex-col items-center justify-center gap-3 rounded-xl border border-dashed px-4 py-14 text-center">
-          <span className="grid size-12 place-items-center rounded-full bg-muted text-muted-foreground">
-            <UserRound className="size-6" aria-hidden="true" />
-          </span>
-          <div className="space-y-1">
-            <p className="font-medium">Selecione uma paciente</p>
-            <p className="text-sm text-muted-foreground">
-              O histórico de sessões é exibido por paciente.
-            </p>
+            <Field>
+              <FieldLabel htmlFor="session-from">De</FieldLabel>
+              <Input
+                id="session-from"
+                type="date"
+                className="h-11"
+                value={fromDate}
+                max={toDate || undefined}
+                onChange={(event) => setFromDate(event.target.value)}
+              />
+            </Field>
+            <Field>
+              <FieldLabel htmlFor="session-to">Até</FieldLabel>
+              <Input
+                id="session-to"
+                type="date"
+                className="h-11"
+                value={toDate}
+                min={fromDate || undefined}
+                onChange={(event) => setToDate(event.target.value)}
+              />
+            </Field>
           </div>
-        </div>
-      ) : isLoadingHistory ? (
-        <LoadingState />
-      ) : loadError ? (
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <p className="text-xs text-muted-foreground">
+              {stats
+                ? `${stats.total} ${
+                    stats.total === 1 ? "sessão" : "sessões"
+                  } no recorte atual`
+                : "Carregando indicadores…"}
+            </p>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={clearFilters}
+              disabled={!hasFilters}
+            >
+              <X className="size-4" />
+              Limpar filtros
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {isLoading && !data ? (
+        <SessionsSkeleton />
+      ) : error ? (
         <Alert variant="destructive">
           <AlertTriangle className="size-4" />
           <AlertTitle>Não foi possível carregar as sessões</AlertTitle>
           <AlertDescription className="space-y-3">
-            <p>{loadError}</p>
-            <Button type="button" size="sm" onClick={retryHistory}>
+            <p>{error}</p>
+            <Button type="button" size="sm" onClick={retry}>
               <RefreshCw className="size-4" />
               Tentar novamente
             </Button>
           </AlertDescription>
         </Alert>
-      ) : filteredSessions.length === 0 ? (
-        <div className="flex flex-col items-center justify-center gap-3 rounded-xl border border-dashed px-4 py-14 text-center">
-          <span className="grid size-12 place-items-center rounded-full bg-muted text-muted-foreground">
-            <CalendarClock className="size-6" aria-hidden="true" />
-          </span>
-          <div className="space-y-1">
-            <p className="font-medium">
-              {sessions.length === 0
-                ? "Nenhuma sessão registrada"
-                : "Nenhuma sessão corresponde aos filtros"}
-            </p>
-            <p className="text-sm text-muted-foreground">
-              {sessions.length > 0
-                ? "Ajuste o período ou o status da sessão."
-                : canWrite
-                ? "Registre a primeira sessão desta paciente."
-                : "Ainda não há sessões registradas para esta paciente."}
-            </p>
-          </div>
-          {canWrite && sessions.length === 0 && (
-            <Button asChild size="sm">
-              <Link
-                href={`/sessions/new?patientId=${encodeURIComponent(patientId)}`}
-              >
-                <Plus className="size-4" />
-                Nova sessão
-              </Link>
-            </Button>
-          )}
-        </div>
-      ) : (
-        <div className="space-y-4">
-          {filteredSessions.map((session) => (
-            <SessionCard
-              key={session.id}
-              session={session}
-              appointment={
-                session.appointmentId
-                  ? appointmentsById.get(session.appointmentId)
-                  : undefined
-              }
-              sale={
-                session.saleId ? salesById.get(session.saleId) : undefined
-              }
-              canWrite={canWrite}
-              onEdit={setEditingSession}
-            />
-          ))}
-        </div>
-      )}
+      ) : stats && data ? (
+        <>
+          <section aria-labelledby="session-kpis" className="space-y-3">
+            <h2 id="session-kpis" className="text-lg font-semibold">
+              Indicadores de sessões
+            </h2>
+            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
+              <MetricCard
+                label="Total de sessões"
+                value={stats.total}
+                detail="Todos os status do recorte"
+                icon={ClipboardList}
+                active={status === "all"}
+                onClick={() => setStatus("all")}
+              />
+              <MetricCard
+                label="Concluídas"
+                value={stats.completed}
+                detail={`${completionRate}% de conclusão`}
+                icon={CircleCheck}
+                tone="completed"
+                active={status === "completed"}
+                onClick={() =>
+                  setStatus((current) =>
+                    current === "completed" ? "all" : "completed",
+                  )
+                }
+              />
+              <MetricCard
+                label="Em andamento"
+                value={stats.inProgress}
+                detail="Aguardando conclusão"
+                icon={Clock}
+                tone="progress"
+                active={status === "in_progress"}
+                onClick={() =>
+                  setStatus((current) =>
+                    current === "in_progress" ? "all" : "in_progress",
+                  )
+                }
+              />
+              <MetricCard
+                label="Canceladas"
+                value={stats.cancelled}
+                detail="Não consomem saldo do pacote"
+                icon={CircleX}
+                tone="cancelled"
+                active={status === "cancelled"}
+                onClick={() =>
+                  setStatus((current) =>
+                    current === "cancelled" ? "all" : "cancelled",
+                  )
+                }
+              />
+              <MetricCard
+                label="Pacientes atendidas"
+                value={stats.patients}
+                detail="Pacientes distintas no recorte"
+                icon={Users}
+                tone="patients"
+              />
+            </div>
+          </section>
+
+          <StatusDistribution stats={stats} />
+
+          <section aria-labelledby="session-history" className="space-y-3">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <h2 id="session-history" className="text-lg font-semibold">
+                Histórico de sessões
+              </h2>
+              <Badge variant="secondary">
+                {sessions.length}{" "}
+                {sessions.length === 1 ? "sessão listada" : "sessões listadas"}
+              </Badge>
+            </div>
+
+            {sessions.length === 0 ? (
+              <div className="flex flex-col items-center justify-center gap-3 rounded-xl border border-dashed px-4 py-14 text-center">
+                <span className="grid size-12 place-items-center rounded-full bg-muted text-muted-foreground">
+                  <CalendarClock className="size-6" aria-hidden="true" />
+                </span>
+                <div className="space-y-1">
+                  <p className="font-medium">
+                    {hasFilters
+                      ? "Nenhuma sessão corresponde aos filtros"
+                      : "Nenhuma sessão registrada"}
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    {hasFilters
+                      ? "Ajuste o paciente, o período ou o status selecionado."
+                      : canWrite
+                        ? "Registre a primeira sessão para começar o acompanhamento."
+                        : "Ainda não há sessões registradas."}
+                  </p>
+                </div>
+                {hasFilters ? (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={clearFilters}
+                  >
+                    <X className="size-4" />
+                    Limpar filtros
+                  </Button>
+                ) : canWrite ? (
+                  <Button asChild size="sm">
+                    <Link href="/sessions/new">
+                      <Plus className="size-4" />
+                      Nova sessão
+                    </Link>
+                  </Button>
+                ) : null}
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {sessions.map((session) => (
+                  <SessionCard
+                    key={session.id}
+                    session={session}
+                    appointment={
+                      session.appointmentId
+                        ? appointmentsById.get(session.appointmentId)
+                        : undefined
+                    }
+                    canWrite={canWrite}
+                    isUpdating={updatingId === session.id}
+                    onEdit={setEditingSession}
+                    onStatusChange={(nextStatus) =>
+                      handleStatusChange(session, nextStatus)
+                    }
+                  />
+                ))}
+              </div>
+            )}
+          </section>
+        </>
+      ) : null}
 
       <EditSessionDialog
         session={editingSession}
@@ -472,16 +801,19 @@ export function SessionsView({
         onOpenChange={(open) => {
           if (!open) setEditingSession(null);
         }}
-        appointments={patientAppointments}
-        sales={sales ?? []}
+        appointments={editingAppointments}
+        sales={editingSales ?? []}
         isLoadingAppointments={appointmentsLoading}
-        isLoadingSales={salesLoading}
-        salesError={salesError}
-        onSuccess={() => {
-          refetch();
-          refetchAppointments();
-          refetchSales();
-        }}
+        isLoadingSales={editingSalesLoading}
+        salesError={editingSalesError}
+        canCreateSale={canCreateSale}
+        newSaleHref={
+          editingPatientId
+            ? `/sales/new?patientId=${encodeURIComponent(editingPatientId)}`
+            : undefined
+        }
+        onRetrySales={refetchEditingSales}
+        onSuccess={retry}
       />
     </div>
   );
