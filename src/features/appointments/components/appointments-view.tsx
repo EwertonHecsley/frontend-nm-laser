@@ -3,6 +3,7 @@
 import {
   AlertTriangle,
   CalendarDays,
+  MessageCircle,
   Pencil,
   Plus,
   RefreshCw,
@@ -46,17 +47,58 @@ import {
   APPOINTMENT_STATUS_BADGE_VARIANTS,
   APPOINTMENT_STATUS_OPTIONS,
   getAppointmentStatusLabel,
+  isAppointmentConfirmable,
   isUuid,
 } from "@/features/appointments/utils";
 import { useApiQuery, useDebouncedValue } from "@/hooks";
+import { AppointmentProximityBadge, AppointmentProximityFlag } from "@/features/appointments/components/appointment-proximity-flag";
 import {
   formatDateTime,
   toEndOfDayIso,
   toStartOfDayIso,
 } from "@/lib/format/date";
 import { getErrorMessage } from "@/lib/http/errors";
+import { buildWhatsAppHref } from "@/lib/whatsapp";
 import { appointmentsService, citiesService, patientsService } from "@/services";
-import type { Appointment, AppointmentStatus } from "@/types";
+import type {
+  Appointment,
+  AppointmentStatus,
+  Patient,
+} from "@/types";
+
+async function listAllPatients(signal: AbortSignal): Promise<Patient[]> {
+  const patients: Patient[] = [];
+  let page = 1;
+  let totalPages = 1;
+
+  do {
+    const response = await patientsService.list(
+      { page, limit: 100 },
+      { signal },
+    );
+    patients.push(...response.data);
+    totalPages = response.meta.totalPages;
+    page += 1;
+  } while (page <= totalPages && page <= 100);
+
+  return patients;
+}
+
+function getWhatsAppConfirmationHref(
+  appointment: Appointment,
+  patient: Patient | undefined,
+  cityName: string,
+): string | null {
+  if (!patient?.whatsapp || !isAppointmentConfirmable(appointment.status)) {
+    return null;
+  }
+
+  const cityLabel =
+    cityName && cityName !== "—" ? ` em ${cityName}` : "";
+  const message = `Olá, ${patient.fullName}! Tudo bem? Passando para confirmar seu agendamento de ${formatDateTime(appointment.scheduledAt)}${cityLabel}. Podemos confirmar?`;
+
+  return buildWhatsAppHref(patient.whatsapp, message);
+}
 
 function LoadingState() {
   return (
@@ -149,8 +191,8 @@ export function AppointmentsView({ canWrite }: { canWrite: boolean }) {
     "cities",
   );
 
-  const { data: patientsPage } = useApiQuery(
-    (signal) => patientsService.list({ page: 1, limit: 100 }, { signal }),
+  const { data: patients } = useApiQuery(
+    (signal) => listAllPatients(signal),
     "appointments-patients",
   );
 
@@ -159,15 +201,9 @@ export function AppointmentsView({ canWrite }: { canWrite: boolean }) {
     [cities],
   );
 
-  const patientNames = useMemo(
-    () =>
-      new Map(
-        (patientsPage?.data ?? []).map((patient) => [
-          patient.id,
-          patient.fullName,
-        ]),
-      ),
-    [patientsPage],
+  const patientsById = useMemo(
+    () => new Map((patients ?? []).map((patient) => [patient.id, patient])),
+    [patients],
   );
 
   const appointments = useMemo(
@@ -356,6 +392,12 @@ export function AppointmentsView({ canWrite }: { canWrite: boolean }) {
                 ? "Resultados conforme os filtros aplicados."
                 : "Todos os agendamentos cadastrados."}
             </CardDescription>
+            <div className="flex flex-wrap items-center gap-2 pt-1 text-xs text-muted-foreground">
+              <span>Sinalização:</span>
+              <AppointmentProximityBadge proximity="normal" />
+              <AppointmentProximityBadge proximity="tomorrow" />
+              <AppointmentProximityBadge proximity="today" />
+            </div>
           </div>
         </CardHeader>
 
@@ -424,49 +466,157 @@ export function AppointmentsView({ canWrite }: { canWrite: boolean }) {
                         Profissional
                       </TableHead>
                       <TableHead className="w-[1%]">Status</TableHead>
-                      {canWrite && (
-                        <TableHead className="w-[1%] text-right">
-                          Ações
-                        </TableHead>
-                      )}
+                      <TableHead className="w-[1%] text-right">
+                        Ações
+                      </TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {filteredAppointments.map((appointment) => (
-                      <TableRow key={appointment.id}>
-                        <TableCell className="font-medium">
-                          {formatDateTime(appointment.scheduledAt)}
-                        </TableCell>
-                        <TableCell>
-                          {patientNames.get(appointment.patientId) ??
-                            "Paciente não listado"}
-                        </TableCell>
-                        <TableCell>
-                          {cityNames.get(appointment.cityId) ?? "—"}
-                        </TableCell>
-                        <TableCell className="hidden font-mono text-xs text-muted-foreground xl:table-cell">
-                          {appointment.professionalId
-                            ? `${appointment.professionalId.slice(0, 8)}…`
-                            : "—"}
-                        </TableCell>
-                        <TableCell>
-                          <StatusControl
-                            appointment={appointment}
-                            canWrite={canWrite}
-                            isUpdating={updatingId === appointment.id}
-                            onChange={(status) =>
-                              void handleStatusChange(appointment, status)
-                            }
-                          />
-                        </TableCell>
-                        {canWrite && (
+                    {filteredAppointments.map((appointment) => {
+                      const patient = patientsById.get(
+                        appointment.patientId,
+                      );
+                      const cityName =
+                        cityNames.get(appointment.cityId) ?? "—";
+                      const whatsappHref = getWhatsAppConfirmationHref(
+                        appointment,
+                        patient,
+                        cityName,
+                      );
+                      const isConfirmable = isAppointmentConfirmable(
+                        appointment.status,
+                      );
+
+                      return (
+                        <TableRow key={appointment.id}>
+                          <TableCell className="font-medium">
+                            {formatDateTime(appointment.scheduledAt)}
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex flex-wrap items-center gap-2">
+                              <span>
+                                {patient?.fullName ?? "Paciente não listado"}
+                              </span>
+                              <AppointmentProximityFlag
+                                scheduledAt={appointment.scheduledAt}
+                                status={appointment.status}
+                              />
+                            </div>
+                          </TableCell>
+                          <TableCell>{cityName}</TableCell>
+                          <TableCell className="hidden font-mono text-xs text-muted-foreground xl:table-cell">
+                            {appointment.professionalId
+                              ? `${appointment.professionalId.slice(0, 8)}…`
+                              : "—"}
+                          </TableCell>
+                          <TableCell>
+                            <StatusControl
+                              appointment={appointment}
+                              canWrite={canWrite}
+                              isUpdating={updatingId === appointment.id}
+                              onChange={(status) =>
+                                void handleStatusChange(appointment, status)
+                              }
+                            />
+                          </TableCell>
                           <TableCell className="text-right">
+                            <div className="flex items-center justify-end gap-1">
+                              {isConfirmable &&
+                                (whatsappHref ? (
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="icon-sm"
+                                    asChild
+                                    title="Confirmar agendamento via WhatsApp"
+                                  >
+                                    <a
+                                      href={whatsappHref}
+                                      target="_blank"
+                                      rel="noreferrer"
+                                      aria-label={`Confirmar agendamento de ${patient?.fullName ?? "paciente"} via WhatsApp`}
+                                    >
+                                      <MessageCircle className="size-4 text-emerald-600" />
+                                    </a>
+                                  </Button>
+                                ) : (
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="icon-sm"
+                                    disabled
+                                    title="Paciente sem WhatsApp cadastrado"
+                                    aria-label="Paciente sem WhatsApp cadastrado"
+                                  >
+                                    <MessageCircle className="size-4" />
+                                  </Button>
+                                ))}
+                              {canWrite && (
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="icon-sm"
+                                  asChild
+                                  aria-label={`Editar agendamento de ${formatDateTime(appointment.scheduledAt)}`}
+                                >
+                                  <Link
+                                    href={`/appointments/${appointment.id}/edit`}
+                                  >
+                                    <Pencil className="size-4" />
+                                  </Link>
+                                </Button>
+                              )}
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </div>
+
+              <div className="space-y-3 lg:hidden">
+                {filteredAppointments.map((appointment) => {
+                  const patient = patientsById.get(appointment.patientId);
+                  const cityName = cityNames.get(appointment.cityId) ?? "—";
+                  const whatsappHref = getWhatsAppConfirmationHref(
+                    appointment,
+                    patient,
+                    cityName,
+                  );
+                  const isConfirmable = isAppointmentConfirmable(
+                    appointment.status,
+                  );
+
+                  return (
+                    <Card key={appointment.id} size="sm">
+                      <CardContent className="space-y-3">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0 space-y-1">
+                            <p className="font-medium">
+                              {formatDateTime(appointment.scheduledAt)}
+                            </p>
+                            <div className="flex flex-wrap items-center gap-2">
+                              <p className="truncate text-sm">
+                                {patient?.fullName ??
+                                  "Paciente não listado"}
+                              </p>
+                              <AppointmentProximityFlag
+                                scheduledAt={appointment.scheduledAt}
+                                status={appointment.status}
+                              />
+                            </div>
+                            <p className="text-xs text-muted-foreground">
+                              {cityName}
+                            </p>
+                          </div>
+                          {canWrite && (
                             <Button
                               type="button"
                               variant="ghost"
                               size="icon-sm"
                               asChild
-                              aria-label={`Editar agendamento de ${formatDateTime(appointment.scheduledAt)}`}
+                              aria-label="Editar agendamento"
                             >
                               <Link
                                 href={`/appointments/${appointment.id}/edit`}
@@ -474,58 +624,53 @@ export function AppointmentsView({ canWrite }: { canWrite: boolean }) {
                                 <Pencil className="size-4" />
                               </Link>
                             </Button>
-                          </TableCell>
-                        )}
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-
-              <div className="space-y-3 lg:hidden">
-                {filteredAppointments.map((appointment) => (
-                  <Card key={appointment.id} size="sm">
-                    <CardContent className="space-y-3">
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="min-w-0 space-y-1">
-                          <p className="font-medium">
-                            {formatDateTime(appointment.scheduledAt)}
-                          </p>
-                          <p className="truncate text-sm">
-                            {patientNames.get(appointment.patientId) ??
-                              "Paciente não listado"}
-                          </p>
-                          <p className="text-xs text-muted-foreground">
-                            {cityNames.get(appointment.cityId) ?? "—"}
-                          </p>
+                          )}
                         </div>
-                        {canWrite && (
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon-sm"
-                            asChild
-                            aria-label="Editar agendamento"
-                          >
-                            <Link
-                              href={`/appointments/${appointment.id}/edit`}
-                            >
-                              <Pencil className="size-4" />
-                            </Link>
-                          </Button>
-                        )}
-                      </div>
-                      <StatusControl
-                        appointment={appointment}
-                        canWrite={canWrite}
-                        isUpdating={updatingId === appointment.id}
-                        onChange={(status) =>
-                          void handleStatusChange(appointment, status)
-                        }
-                      />
-                    </CardContent>
-                  </Card>
-                ))}
+                        <div className="flex flex-wrap items-center gap-2">
+                          <div className="min-w-36 flex-1">
+                            <StatusControl
+                              appointment={appointment}
+                              canWrite={canWrite}
+                              isUpdating={updatingId === appointment.id}
+                              onChange={(status) =>
+                                void handleStatusChange(appointment, status)
+                              }
+                            />
+                          </div>
+                          {isConfirmable &&
+                            (whatsappHref ? (
+                              <Button
+                                type="button"
+                                size="sm"
+                                className="gap-1.5 bg-emerald-600 text-white hover:bg-emerald-700"
+                                asChild
+                              >
+                                <a
+                                  href={whatsappHref}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                >
+                                  <MessageCircle className="size-4" />
+                                  Confirmar no WhatsApp
+                                </a>
+                              </Button>
+                            ) : (
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant="outline"
+                                disabled
+                                title="Paciente sem WhatsApp cadastrado"
+                              >
+                                <MessageCircle className="size-4" />
+                                Sem WhatsApp
+                              </Button>
+                            ))}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  );
+                })}
               </div>
             </>
           )}
