@@ -3,7 +3,7 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Loader2, Save } from "lucide-react";
 import { useEffect } from "react";
-import { Controller, useForm } from "react-hook-form";
+import { Controller, useForm, useWatch } from "react-hook-form";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -31,6 +31,7 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { getAppointmentStatusLabel } from "@/features/appointments/utils";
+import { SessionPackageFields } from "@/features/sessions/components/session-package-fields";
 import {
   editSessionFormSchema,
   type EditSessionFormValues,
@@ -39,7 +40,7 @@ import { SESSION_STATUS_OPTIONS } from "@/features/sessions/utils";
 import { formatDateTime, toDateTimeInputValue } from "@/lib/format/date";
 import { getErrorMessage } from "@/lib/http/errors";
 import { sessionsService } from "@/services";
-import type { Appointment, SessionRecord, SessionStatus } from "@/types";
+import type { Appointment, Sale, SessionRecord, SessionStatus } from "@/types";
 
 const NO_APPOINTMENT = "none";
 
@@ -48,7 +49,10 @@ interface EditSessionDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   appointments: readonly Appointment[];
+  sales: readonly Sale[];
   isLoadingAppointments?: boolean;
+  isLoadingSales?: boolean;
+  salesError?: string | null;
   onSuccess: () => void;
 }
 
@@ -57,7 +61,10 @@ export function EditSessionDialog({
   open,
   onOpenChange,
   appointments,
+  sales,
   isLoadingAppointments,
+  isLoadingSales,
+  salesError,
   onSuccess,
 }: EditSessionDialogProps) {
   const {
@@ -65,6 +72,7 @@ export function EditSessionDialog({
     register,
     handleSubmit,
     reset,
+    setValue,
     setError,
     formState: { errors, isSubmitting },
   } = useForm<EditSessionFormValues>({
@@ -74,6 +82,8 @@ export function EditSessionDialog({
       sessionNumber: "",
       performedAt: "",
       appointmentId: "",
+      saleId: "",
+      areaIds: [],
       applicatorId: "",
       potency: "",
       frequency: "",
@@ -83,6 +93,9 @@ export function EditSessionDialog({
       signature: "",
     },
   });
+
+  const selectedSaleId = useWatch({ control, name: "saleId" });
+  const selectedAreaIds = useWatch({ control, name: "areaIds" });
 
   useEffect(() => {
     if (session) {
@@ -98,6 +111,8 @@ export function EditSessionDialog({
           ? toDateTimeInputValue(session.performedAt)
           : "",
         appointmentId: session.appointmentId ?? "",
+        saleId: session.saleId ?? "",
+        areaIds: session.areas.map((area) => area.id),
         applicatorId: session.applicatorId ?? "",
         potency: session.potency ?? "",
         frequency: session.frequency ?? "",
@@ -121,6 +136,8 @@ export function EditSessionDialog({
         sessionNumber: values.sessionNumber,
         performedAt: new Date(values.performedAt).toISOString(),
         appointmentId: values.appointmentId.trim() || null,
+        saleId: values.saleId.trim() || null,
+        areaIds: values.areaIds,
         applicatorId: values.applicatorId.trim() || null,
         potency: values.potency || null,
         frequency: values.frequency || null,
@@ -254,6 +271,22 @@ export function EditSessionDialog({
               />
               <FieldError errors={[errors.appointmentId]} />
             </Field>
+
+            <SessionPackageFields
+              idPrefix="edit-session"
+              saleId={selectedSaleId}
+              areaIds={selectedAreaIds}
+              sales={sales}
+              isLoadingSales={Boolean(isLoadingSales)}
+              salesError={salesError}
+              saleError={errors.saleId?.message}
+              areasError={errors.areaIds?.message}
+              onSaleChange={(saleId) => {
+                setValue("saleId", saleId);
+                setValue("areaIds", []);
+              }}
+              onAreasChange={(areaIds) => setValue("areaIds", areaIds)}
+            />
 
             <Field data-invalid={Boolean(errors.potency)}>
               <FieldLabel htmlFor="edit-potency">Potência</FieldLabel>

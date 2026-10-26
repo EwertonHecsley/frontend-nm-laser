@@ -34,6 +34,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { PatientCombobox } from "@/features/appointments/components/patient-combobox";
 import { getAppointmentStatusLabel } from "@/features/appointments/utils";
+import { SessionPackageFields } from "@/features/sessions/components/session-package-fields";
 import {
   sessionFormSchema,
   type SessionFormValues,
@@ -42,7 +43,11 @@ import { SESSION_STATUS_OPTIONS } from "@/features/sessions/utils";
 import { useApiQuery } from "@/hooks";
 import { formatDateTime, toDateTimeInputValue } from "@/lib/format/date";
 import { getErrorMessage } from "@/lib/http/errors";
-import { appointmentsService, sessionsService } from "@/services";
+import {
+  appointmentsService,
+  salesService,
+  sessionsService,
+} from "@/services";
 
 const NO_APPOINTMENT = "none";
 
@@ -66,6 +71,8 @@ export function SessionForm({ initialPatientId = "" }: SessionFormProps) {
       patientId: initialPatientId,
       status: "completed",
       appointmentId: "",
+      saleId: "",
+      areaIds: [],
       sessionNumber: "1",
       performedAt: "",
       applicatorId: "",
@@ -79,6 +86,8 @@ export function SessionForm({ initialPatientId = "" }: SessionFormProps) {
   });
 
   const selectedPatientId = useWatch({ control, name: "patientId" });
+  const selectedSaleId = useWatch({ control, name: "saleId" });
+  const selectedAreaIds = useWatch({ control, name: "areaIds" });
 
   const {
     data: appointments,
@@ -86,6 +95,16 @@ export function SessionForm({ initialPatientId = "" }: SessionFormProps) {
   } = useApiQuery(
     (signal) => appointmentsService.list({}, { signal }),
     "session-appointments",
+    { enabled: Boolean(selectedPatientId) },
+  );
+
+  const {
+    data: sales,
+    isLoading: isLoadingSales,
+    error: salesError,
+  } = useApiQuery(
+    (signal) => salesService.listByPatient(selectedPatientId, { signal }),
+    `session-sales:${selectedPatientId}`,
     { enabled: Boolean(selectedPatientId) },
   );
 
@@ -115,6 +134,8 @@ export function SessionForm({ initialPatientId = "" }: SessionFormProps) {
         sessionNumber: values.sessionNumber,
         performedAt: new Date(values.performedAt).toISOString(),
         appointmentId: values.appointmentId.trim() || undefined,
+        saleId: values.saleId.trim() || undefined,
+        areaIds: values.areaIds,
         applicatorId: values.applicatorId.trim() || undefined,
         potency: values.potency || undefined,
         frequency: values.frequency || undefined,
@@ -167,12 +188,30 @@ export function SessionForm({ initialPatientId = "" }: SessionFormProps) {
                     onChange={(patientId) => {
                       field.onChange(patientId);
                       setValue("appointmentId", "");
+                      setValue("saleId", "");
+                      setValue("areaIds", []);
                     }}
                   />
                 )}
               />
               <FieldError errors={[errors.patientId]} />
             </Field>
+
+            <SessionPackageFields
+              idPrefix="session"
+              saleId={selectedSaleId}
+              areaIds={selectedAreaIds}
+              sales={sales ?? []}
+              isLoadingSales={isLoadingSales}
+              salesError={salesError}
+              saleError={errors.saleId?.message}
+              areasError={errors.areaIds?.message}
+              onSaleChange={(saleId) => {
+                setValue("saleId", saleId);
+                setValue("areaIds", []);
+              }}
+              onAreasChange={(areaIds) => setValue("areaIds", areaIds)}
+            />
 
             <Field data-invalid={Boolean(errors.sessionNumber)}>
               <FieldLabel htmlFor="sessionNumber">

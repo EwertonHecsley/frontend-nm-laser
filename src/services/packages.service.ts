@@ -1,0 +1,54 @@
+import { http } from "@/lib/http/client";
+import { sanitizeSingleLine } from "@/lib/security/sanitize";
+import type {
+  CreatePackageInput,
+  LaserPackage,
+  PackageItemInput,
+  UpdatePackageInput,
+} from "@/types";
+
+function toItemsPayload(items: PackageItemInput[]) {
+  return items.map((item) => ({
+    areaId: item.areaId,
+    sessionsCount: item.sessionsCount,
+  }));
+}
+
+function toCreatePayload(input: CreatePackageInput) {
+  return {
+    name: sanitizeSingleLine(input.name, 120),
+    items: toItemsPayload(input.items),
+  };
+}
+
+function toUpdatePayload(input: UpdatePackageInput) {
+  return {
+    ...(input.name !== undefined
+      ? { name: sanitizeSingleLine(input.name, 120) }
+      : {}),
+    ...(input.items !== undefined ? { items: toItemsPayload(input.items) } : {}),
+  };
+}
+
+export const packagesService = {
+  list(options?: { signal?: AbortSignal }) {
+    return http.get<LaserPackage[]>("packages", { signal: options?.signal });
+  },
+
+  getById(id: string, options?: { signal?: AbortSignal }) {
+    return http.get<LaserPackage>(`packages/${encodeURIComponent(id)}`, {
+      signal: options?.signal,
+    });
+  },
+
+  create(input: CreatePackageInput) {
+    return http.post<LaserPackage>("packages", toCreatePayload(input));
+  },
+
+  update(id: string, input: UpdatePackageInput) {
+    return http.patch<LaserPackage>(
+      `packages/${encodeURIComponent(id)}`,
+      toUpdatePayload(input),
+    );
+  },
+};

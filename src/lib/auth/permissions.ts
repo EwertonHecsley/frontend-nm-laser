@@ -9,7 +9,9 @@ export type Permission =
   | "appointments:read"
   | "appointments:write"
   | "sessions:read"
-  | "sessions:write";
+  | "sessions:write"
+  | "catalog:manage"
+  | "sales:write";
 
 const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
   gestora: [
@@ -22,6 +24,8 @@ const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
     "appointments:write",
     "sessions:read",
     "sessions:write",
+    "catalog:manage",
+    "sales:write",
   ],
   vendas: [
     "cities:read",
@@ -30,6 +34,7 @@ const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
     "appointments:read",
     "appointments:write",
     "sessions:read",
+    "sales:write",
   ],
   aplicadora: [
     "cities:read",

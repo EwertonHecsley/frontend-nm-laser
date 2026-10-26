@@ -45,8 +45,13 @@ import {
 } from "@/features/sessions/utils";
 import { useApiQuery } from "@/hooks";
 import { formatDateTime, toDateInputValue } from "@/lib/format/date";
-import { appointmentsService, sessionsService } from "@/services";
-import type { Appointment, SessionRecord, SessionStatus } from "@/types";
+import { appointmentsService, salesService, sessionsService } from "@/services";
+import type {
+  Appointment,
+  Sale,
+  SessionRecord,
+  SessionStatus,
+} from "@/types";
 
 interface TechItemProps {
   label: string;
@@ -67,11 +72,13 @@ function TechItem({ label, value }: TechItemProps) {
 function SessionCard({
   session,
   appointment,
+  sale,
   canWrite,
   onEdit,
 }: {
   session: SessionRecord;
   appointment?: Appointment;
+  sale?: Sale;
   canWrite: boolean;
   onEdit: (session: SessionRecord) => void;
 }) {
@@ -123,6 +130,26 @@ function SessionCard({
             value={session.energyAccumulated}
           />
         </dl>
+
+        {(sale || session.areas.length > 0) && (
+          <div className="space-y-1.5">
+            <p className="text-xs font-medium tracking-wide text-muted-foreground">
+              Pacote contratado
+            </p>
+            <p className="text-sm">
+              {sale?.package?.name ?? "Pacote não identificado"}
+            </p>
+            {session.areas.length > 0 && (
+              <div className="flex flex-wrap gap-1.5">
+                {session.areas.map((area) => (
+                  <Badge key={area.id} variant="secondary">
+                    {area.name}
+                  </Badge>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
 
         {session.observations && (
           <div className="space-y-1">
@@ -205,6 +232,16 @@ export function SessionsView({
     "sessions-appointments",
     { enabled: Boolean(patientId) },
   );
+  const {
+    data: sales,
+    error: salesError,
+    isLoading: salesLoading,
+    refetch: refetchSales,
+  } = useApiQuery(
+    (signal) => salesService.listByPatient(patientId, { signal }),
+    `sessions-sales:${patientId}`,
+    { enabled: Boolean(patientId) },
+  );
 
   const sessions = sortSessionsByPerformedAt(data ?? []);
   const appointmentsById = useMemo(
@@ -216,6 +253,10 @@ export function SessionsView({
         ]),
       ),
     [appointments],
+  );
+  const salesById = useMemo(
+    () => new Map((sales ?? []).map((sale) => [sale.id, sale])),
+    [sales],
   );
 
   const patientAppointments = useMemo(
@@ -244,11 +285,12 @@ export function SessionsView({
     [fromDate, sessions, status, toDate],
   );
   const loadError = error ?? appointmentsError;
-  const isLoadingHistory = isLoading || appointmentsLoading;
+  const isLoadingHistory = isLoading || appointmentsLoading || salesLoading;
 
   function retryHistory() {
     refetch();
     refetchAppointments();
+    refetchSales();
   }
 
   const createAction = canWrite ? (
@@ -414,6 +456,9 @@ export function SessionsView({
                   ? appointmentsById.get(session.appointmentId)
                   : undefined
               }
+              sale={
+                session.saleId ? salesById.get(session.saleId) : undefined
+              }
               canWrite={canWrite}
               onEdit={setEditingSession}
             />
@@ -428,10 +473,14 @@ export function SessionsView({
           if (!open) setEditingSession(null);
         }}
         appointments={patientAppointments}
+        sales={sales ?? []}
         isLoadingAppointments={appointmentsLoading}
+        isLoadingSales={salesLoading}
+        salesError={salesError}
         onSuccess={() => {
           refetch();
           refetchAppointments();
+          refetchSales();
         }}
       />
     </div>

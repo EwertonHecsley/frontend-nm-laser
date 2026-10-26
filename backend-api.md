@@ -30,20 +30,42 @@ Base URL: `http://localhost:3030` (configurável via env). Autenticação: JWT B
 Status: scheduled, arrived, performed, missed, rescheduled, cancelled.
 
 ### Sessões
-- POST /sessions { appointmentId?, patientId, sessionNumber, performedAt, applicatorId?, potency?, frequency?, technique?, energyAccumulated?, observations?, signature?, status? }
+- POST /sessions { appointmentId?, saleId?, patientId, areaIds?, sessionNumber, performedAt, applicatorId?, potency?, frequency?, technique?, energyAccumulated?, observations?, signature?, status? }
 - GET /sessions?patientId=
 - GET /sessions/:id
-- PATCH /sessions/:id { appointmentId?, sessionNumber?, performedAt?, applicatorId?, potency?, frequency?, technique?, energyAccumulated?, observations?, signature?, status? }
+- PATCH /sessions/:id { appointmentId?, saleId?, areaIds?, sessionNumber?, performedAt?, applicatorId?, potency?, frequency?, technique?, energyAccumulated?, observations?, signature?, status? }
 Status da sessão: completed, in_progress, cancelled (padrão: completed).
+- `saleId` vincula a sessão ao pacote vendido para a paciente.
+- `areaIds` informa as áreas aplicadas (ex.: axila, buço). Só são aceitas áreas do pacote da venda.
+- Ao criar/atualizar como `completed`, o backend valida e desconta o saldo por área. Cada sessão concluída consome uma unidade de cada área informada.
+- A resposta das sessões inclui `saleId` e `areas: [{ id, name }]`.
 
 
 ### Sync (offline)
 - POST /sync { operations: [{ idempotencyKey, entityType, action, payload }] }
 - Resposta: { results: [{ idempotencyKey, status: applied|duplicate|conflict|error }] }
 
-### Pacotes/Áreas/Vendas/Pagamentos
-- Entidades: areas, packages (sessionsCount), packageAreas, sales, payments.
-- Endpoints a serem expostos conforme módulos (a implementar conforme necessidade).
+### Áreas
+- GET /areas — lista o catálogo (axila, buço, virilha…)
+- POST /areas { name } (gestora)
+- GET /areas/:id
+- PATCH /areas/:id { name } (gestora)
+
+### Pacotes
+- GET /packages — lista pacotes com `items: [{ areaId, areaName, sessionsCount }]`
+- POST /packages { name, items: [{ areaId, sessionsCount }] } (gestora)
+- GET /packages/:id
+- PATCH /packages/:id { name?, items? } (gestora)
+
+### Vendas
+- GET /sales?patientId= — vendas da paciente com saldo por área:
+  `areas: [{ areaId, areaName, sessionsCount, used, remaining }]`
+- POST /sales { patientId, packageId, consultantId?, value, discount? } (gestora, vendas)
+- GET /sales/:id
+- PATCH /sales/:id { consultantId?, value?, discount? } (gestora, vendas)
+
+### Pagamentos
+- Entidades no schema: payments (sem endpoints implementados).
 
 ## IDs e versionamento
 - UUIDs estáveis gerados no servidor; version e timestamps em todas entidades.

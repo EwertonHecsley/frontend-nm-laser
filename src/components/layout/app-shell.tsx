@@ -1,6 +1,8 @@
 "use client";
 
 import {
+  BadgeDollarSign,
+  Boxes,
   CalendarDays,
   ClipboardList,
   LayoutDashboard,
@@ -9,6 +11,7 @@ import {
   Menu,
   PanelLeftClose,
   PanelLeftOpen,
+  ScanLine,
   Sparkles,
   Users,
   type LucideIcon,
@@ -56,9 +59,12 @@ interface NavItem {
 const NAV_ITEMS: readonly NavItem[] = [
   { label: "Visão geral", href: "/", icon: LayoutDashboard },
   { label: "Cidades", href: "/cities", icon: MapPin },
+  { label: "Áreas", href: "/areas", icon: ScanLine },
+  { label: "Pacotes", href: "/packages", icon: Boxes },
   { label: "Pacientes", href: "/patients", icon: Users },
   { label: "Agendamentos", href: "/appointments", icon: CalendarDays },
   { label: "Sessões", href: "/sessions", icon: ClipboardList },
+  { label: "Vendas", href: "/sales", icon: BadgeDollarSign },
 ];
 
 function isActivePath(pathname: string, href: string): boolean {
@@ -80,6 +86,30 @@ function getPageTitle(pathname: string): string {
 
   if (pathname.startsWith("/cities")) {
     return "Cidades";
+  }
+
+  if (pathname === "/areas/new") {
+    return "Nova área";
+  }
+
+  if (/^\/areas\/[^/]+\/edit$/.test(pathname)) {
+    return "Editar área";
+  }
+
+  if (pathname.startsWith("/areas")) {
+    return "Áreas";
+  }
+
+  if (pathname === "/packages/new") {
+    return "Novo pacote";
+  }
+
+  if (/^\/packages\/[^/]+\/edit$/.test(pathname)) {
+    return "Editar pacote";
+  }
+
+  if (pathname.startsWith("/packages")) {
+    return "Pacotes";
   }
 
   if (pathname === "/patients/new") {
@@ -112,6 +142,18 @@ function getPageTitle(pathname: string): string {
 
   if (pathname.startsWith("/sessions")) {
     return "Sessões";
+  }
+
+  if (pathname === "/sales/new") {
+    return "Nova venda";
+  }
+
+  if (/^\/sales\/[^/]+\/edit$/.test(pathname)) {
+    return "Editar venda";
+  }
+
+  if (pathname.startsWith("/sales")) {
+    return "Vendas";
   }
 
   if (pathname.startsWith("/forbidden")) {

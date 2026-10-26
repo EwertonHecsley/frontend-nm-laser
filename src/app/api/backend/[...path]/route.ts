@@ -13,6 +13,9 @@ const ALLOWED_RESOURCES = new Set([
   "patients",
   "appointments",
   "sessions",
+  "areas",
+  "packages",
+  "sales",
 ]);
 
 const METHOD_PERMISSIONS: Record<
@@ -36,6 +39,18 @@ const METHOD_PERMISSIONS: Record<
   sessions: {
     POST: "sessions:write",
     PATCH: "sessions:write",
+  },
+  areas: {
+    POST: "catalog:manage",
+    PATCH: "catalog:manage",
+  },
+  packages: {
+    POST: "catalog:manage",
+    PATCH: "catalog:manage",
+  },
+  sales: {
+    POST: "sales:write",
+    PATCH: "sales:write",
   },
 };
 

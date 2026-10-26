@@ -18,6 +18,12 @@ const ROUTE_ACCESS_RULES: readonly RouteAccessRule[] = [
     roles: ["gestora", "vendas"],
   },
   { pattern: /^\/sessions\/new\/?$/, roles: ["gestora", "aplicadora"] },
+  { pattern: /^\/areas\/new\/?$/, roles: ["gestora"] },
+  { pattern: /^\/areas\/[^/]+\/edit\/?$/, roles: ["gestora"] },
+  { pattern: /^\/packages\/new\/?$/, roles: ["gestora"] },
+  { pattern: /^\/packages\/[^/]+\/edit\/?$/, roles: ["gestora"] },
+  { pattern: /^\/sales\/new\/?$/, roles: ["gestora", "vendas"] },
+  { pattern: /^\/sales\/[^/]+\/edit\/?$/, roles: ["gestora", "vendas"] },
 ];
 
 export function getAllowedRoles(pathname: string): readonly Role[] | null {

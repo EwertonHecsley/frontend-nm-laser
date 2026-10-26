@@ -9,6 +9,10 @@ function toCreatePayload(input: CreateSessionInput) {
     performedAt: input.performedAt,
     ...(input.status ? { status: input.status } : { status: "completed" }),
     ...(input.appointmentId ? { appointmentId: input.appointmentId } : {}),
+    ...(input.saleId ? { saleId: input.saleId } : {}),
+    ...(input.areaIds?.length
+      ? { areaIds: [...new Set(input.areaIds)] }
+      : {}),
     ...(input.applicatorId ? { applicatorId: input.applicatorId } : {}),
     ...(input.potency ? { potency: sanitizeSingleLine(input.potency, 80) } : {}),
     ...(input.frequency
@@ -39,6 +43,12 @@ function toUpdatePayload(input: UpdateSessionInput) {
     ...(input.status !== undefined ? { status: input.status } : {}),
     ...(input.appointmentId !== undefined
       ? { appointmentId: input.appointmentId || null }
+      : {}),
+    ...(input.saleId !== undefined
+      ? { saleId: input.saleId || null }
+      : {}),
+    ...(input.areaIds !== undefined
+      ? { areaIds: [...new Set(input.areaIds)] }
       : {}),
     ...(input.applicatorId !== undefined
       ? { applicatorId: input.applicatorId || null }
