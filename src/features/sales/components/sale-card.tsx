@@ -20,10 +20,10 @@ export { formatCurrency };
 
 export function SaleCard({
   sale,
-  canWrite,
+  canEdit,
 }: {
   sale: Sale;
-  canWrite: boolean;
+  canEdit: boolean;
 }) {
   const totalRemaining = sale.areas.reduce(
     (sum, area) => sum + area.remaining,
@@ -45,7 +45,7 @@ export function SaleCard({
           </div>
           <div className="flex items-center gap-2">
             <Badge variant="secondary">{formatCurrency(sale.value)}</Badge>
-            {canWrite && (
+            {canEdit && (
               <Button
                 type="button"
                 variant="outline"

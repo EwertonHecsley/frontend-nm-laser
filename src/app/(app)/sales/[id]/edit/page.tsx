@@ -24,7 +24,7 @@ export default async function EditSalePage({ params }: EditSalePageProps) {
     redirect(LOGIN_PATH);
   }
 
-  if (!hasPermission(user.role, "sales:write")) {
+  if (user.role !== "gestora" || !hasPermission(user.role, "sales:write")) {
     redirect(FORBIDDEN_PATH);
   }
 

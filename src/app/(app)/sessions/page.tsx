@@ -34,6 +34,7 @@ export default async function SessionsPage({
       initialPatientId={initialPatientId}
       canWrite={hasPermission(user.role, "sessions:write")}
       canCreateSale={hasPermission(user.role, "sales:write")}
+      canSchedule={hasPermission(user.role, "appointments:write")}
     />
   );
 }

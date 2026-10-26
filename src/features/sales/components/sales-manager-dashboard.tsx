@@ -435,7 +435,7 @@ export function SalesManagerDashboard({ canWrite }: { canWrite: boolean }) {
             ) : (
               <div className="space-y-4">
                 {sales.map((sale) => (
-                  <SaleCard key={sale.id} sale={sale} canWrite={canWrite} />
+                  <SaleCard key={sale.id} sale={sale} canEdit={canWrite} />
                 ))}
               </div>
             )}

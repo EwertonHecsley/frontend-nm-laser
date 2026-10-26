@@ -47,6 +47,7 @@ import { appointmentsService, citiesService } from "@/services";
 interface AppointmentFormProps {
   mode: "create" | "edit";
   appointmentId?: string;
+  initialPatientId?: string;
 }
 
 function getMutationError(error: unknown): string {
@@ -60,6 +61,7 @@ function getMutationError(error: unknown): string {
 export function AppointmentForm({
   mode,
   appointmentId = "",
+  initialPatientId = "",
 }: AppointmentFormProps) {
   const router = useRouter();
   const isEdit = mode === "edit";
@@ -100,7 +102,7 @@ export function AppointmentForm({
   } = useForm<AppointmentFormValues>({
     resolver: zodResolver(appointmentFormSchema),
     defaultValues: {
-      patientId: "",
+      patientId: initialPatientId,
       cityId: "",
       professionalId: "",
       scheduledAt: "",

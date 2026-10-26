@@ -72,3 +72,48 @@ export interface UpdateSaleInput {
   value?: string;
   discount?: string | null;
 }
+
+export interface SaleOpportunityArea {
+  areaId: string;
+  areaName: string;
+  sessionsCount: number;
+  used: number;
+  remaining: number;
+}
+
+export interface SaleOpportunityPackage {
+  id: string;
+  name: string;
+  sessionsCount: number;
+}
+
+export interface SaleOpportunity {
+  saleId: string;
+  purchasedAt: string;
+  patient: SalePatientSummary;
+  city: SaleCitySummary | null;
+  package: SaleOpportunityPackage | null;
+  sessionsCount: number;
+  used: number;
+  remaining: number;
+  started: boolean;
+  areas: SaleOpportunityArea[];
+}
+
+export interface SaleOpportunitiesStats {
+  patientsCount: number;
+  activePatientsCount: number;
+  notStartedPatientsCount: number;
+  inProgressPatientsCount: number;
+  packagesCount: number;
+  activePackagesCount: number;
+  notStartedCount: number;
+  inProgressCount: number;
+  completedCount: number;
+  pendingSessions: number;
+}
+
+export interface SaleOpportunities {
+  stats: SaleOpportunitiesStats;
+  packages: SaleOpportunity[];
+}

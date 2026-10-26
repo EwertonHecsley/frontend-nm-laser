@@ -516,7 +516,7 @@ export function SalesVendorDashboard({ canWrite }: { canWrite: boolean }) {
                     Vendas recentes
                   </h2>
                   <p className="text-sm text-muted-foreground">
-                    Últimos registros das suas vendas, com acesso à edição.
+                    Últimos registros das suas vendas.
                   </p>
                 </div>
                 {recentSales.length > 5 && (
@@ -535,7 +535,7 @@ export function SalesVendorDashboard({ canWrite }: { canWrite: boolean }) {
 
               <div className="space-y-4">
                 {visibleSales.map((sale) => (
-                  <SaleCard key={sale.id} sale={sale} canWrite={canWrite} />
+                  <SaleCard key={sale.id} sale={sale} canEdit={false} />
                 ))}
               </div>
             </section>

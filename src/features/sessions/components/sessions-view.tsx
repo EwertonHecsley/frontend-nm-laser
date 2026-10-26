@@ -44,6 +44,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { getAppointmentStatusLabel } from "@/features/appointments/utils";
 import { PatientCombobox } from "@/features/appointments/components/patient-combobox";
 import { EditSessionDialog } from "@/features/sessions/components/edit-session-dialog";
+import { SessionOpportunities } from "@/features/sessions/components/session-opportunities";
 import {
   SESSION_STATUS_OPTIONS,
   SESSION_STATUS_BADGE_VARIANTS,
@@ -398,12 +399,15 @@ export function SessionsView({
   initialPatientId,
   canWrite,
   canCreateSale = false,
+  canSchedule = false,
 }: {
   initialPatientId: string;
   canWrite: boolean;
   canCreateSale?: boolean;
+  canSchedule?: boolean;
 }) {
   const [patientId, setPatientId] = useState(initialPatientId);
+  const [opportunitiesRefreshKey, setOpportunitiesRefreshKey] = useState(0);
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
   const [status, setStatus] = useState<SessionStatus | "all">("all");
@@ -490,6 +494,7 @@ export function SessionsView({
     refetch();
     refetchAppointments();
     refetchEditingSales();
+    setOpportunitiesRefreshKey((current) => current + 1);
   }
 
   async function handleStatusChange(
@@ -640,6 +645,11 @@ export function SessionsView({
           </div>
         </CardContent>
       </Card>
+
+      <SessionOpportunities
+        refreshKey={opportunitiesRefreshKey}
+        canSchedule={canSchedule}
+      />
 
       {isLoading && !data ? (
         <SessionsSkeleton />

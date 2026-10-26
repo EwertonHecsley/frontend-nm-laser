@@ -16,7 +16,13 @@ export const metadata = {
   title: "Novo agendamento",
 };
 
-export default async function NewAppointmentPage() {
+interface NewAppointmentPageProps {
+  searchParams: Promise<{ patientId?: string | string[] }>;
+}
+
+export default async function NewAppointmentPage({
+  searchParams,
+}: NewAppointmentPageProps) {
   const user = await getServerSession();
 
   if (!user) {
@@ -26,6 +32,13 @@ export default async function NewAppointmentPage() {
   if (!hasPermission(user.role, "appointments:write")) {
     redirect(FORBIDDEN_PATH);
   }
+
+  const params = await searchParams;
+  const rawPatientId = Array.isArray(params.patientId)
+    ? params.patientId[0]
+    : params.patientId;
+  const initialPatientId =
+    rawPatientId && rawPatientId.length <= 128 ? rawPatientId : "";
 
   return (
     <div className="space-y-6">
@@ -41,7 +54,7 @@ export default async function NewAppointmentPage() {
           </Button>
         }
       />
-      <AppointmentForm mode="create" />
+      <AppointmentForm mode="create" initialPatientId={initialPatientId} />
     </div>
   );
 }

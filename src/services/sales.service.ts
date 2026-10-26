@@ -5,6 +5,7 @@ import type {
   Sale,
   SaleConsultantSummary,
   SaleListFilters,
+  SaleOpportunities,
   SaleSummary,
   UpdateSaleInput,
 } from "@/types";
@@ -66,6 +67,12 @@ export const salesService = {
 
   consultants(options?: { signal?: AbortSignal }) {
     return http.get<SaleConsultantSummary[]>("sales/consultants", {
+      signal: options?.signal,
+    });
+  },
+
+  opportunities(options?: { signal?: AbortSignal }) {
+    return http.get<SaleOpportunities>("sales/opportunities", {
       signal: options?.signal,
     });
   },
