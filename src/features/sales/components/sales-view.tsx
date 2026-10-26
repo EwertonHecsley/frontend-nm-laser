@@ -25,8 +25,10 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { PatientCombobox } from "@/features/appointments/components/patient-combobox";
 import { SaleCard } from "@/features/sales/components/sale-card";
 import { SalesManagerDashboard } from "@/features/sales/components/sales-manager-dashboard";
+import { SalesVendorDashboard } from "@/features/sales/components/sales-vendor-dashboard";
 import { useApiQuery } from "@/hooks";
 import { salesService } from "@/services";
+import type { Role } from "@/types";
 
 function PatientSalesSection({
   initialPatientId,
@@ -139,12 +141,15 @@ function PatientSalesSection({
 export function SalesView({
   initialPatientId,
   canWrite,
-  isManager,
+  role,
 }: {
   initialPatientId: string;
   canWrite: boolean;
-  isManager: boolean;
+  role: Role;
 }) {
+  const isManager = role === "gestora";
+  const isVendor = role === "vendas";
+
   const createAction = canWrite ? (
     <Button asChild>
       <Link
@@ -166,14 +171,18 @@ export function SalesView({
         title="Vendas"
         description={
           isManager
-            ? "Acompanhe quantidade de vendas e faturamento por cidade, cliente e período."
-            : "Pacotes contratados por paciente e saldo de sessões por área."
+            ? "Acompanhe quantidade de vendas e faturamento por cidade, consultora, cliente e período."
+            : isVendor
+              ? "Acompanhe o resumo das suas vendas, seus clientes e as melhores oportunidades de contato."
+              : "Pacotes contratados por paciente e saldo de sessões por área."
         }
         actions={createAction}
       />
 
       {isManager ? (
         <SalesManagerDashboard canWrite={canWrite} />
+      ) : isVendor ? (
+        <SalesVendorDashboard canWrite={canWrite} />
       ) : (
         <PatientSalesSection
           initialPatientId={initialPatientId}

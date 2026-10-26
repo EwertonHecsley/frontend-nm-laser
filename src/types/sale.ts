@@ -17,6 +17,7 @@ export interface SalePackageSummary {
 export interface SalePatientSummary {
   id: string;
   fullName: string;
+  whatsapp: string | null;
 }
 
 export interface SaleCitySummary {
