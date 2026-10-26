@@ -1,5 +1,8 @@
 import { http } from "@/lib/http/client";
-import { sanitizeSingleLine } from "@/lib/security/sanitize";
+import {
+  sanitizeSingleLine,
+  uppercaseText,
+} from "@/lib/security/sanitize";
 import type {
   CreatePackageInput,
   LaserPackage,
@@ -16,7 +19,7 @@ function toItemsPayload(items: PackageItemInput[]) {
 
 function toCreatePayload(input: CreatePackageInput) {
   return {
-    name: sanitizeSingleLine(input.name, 120),
+    name: sanitizeSingleLine(uppercaseText(input.name), 120),
     items: toItemsPayload(input.items),
   };
 }
@@ -24,7 +27,7 @@ function toCreatePayload(input: CreatePackageInput) {
 function toUpdatePayload(input: UpdatePackageInput) {
   return {
     ...(input.name !== undefined
-      ? { name: sanitizeSingleLine(input.name, 120) }
+      ? { name: sanitizeSingleLine(uppercaseText(input.name), 120) }
       : {}),
     ...(input.items !== undefined ? { items: toItemsPayload(input.items) } : {}),
   };

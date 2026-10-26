@@ -1,9 +1,12 @@
 import { http } from "@/lib/http/client";
-import { sanitizeSingleLine } from "@/lib/security/sanitize";
+import {
+  sanitizeSingleLine,
+  uppercaseText,
+} from "@/lib/security/sanitize";
 import type { City, CreateCityInput, UpdateCityInput } from "@/types";
 
 function toCityPayload(input: CreateCityInput | UpdateCityInput) {
-  return { name: sanitizeSingleLine(input.name, 120) };
+  return { name: sanitizeSingleLine(uppercaseText(input.name), 120) };
 }
 
 export const citiesService = {

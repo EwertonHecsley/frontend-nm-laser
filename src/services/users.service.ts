@@ -2,6 +2,7 @@ import { http } from "@/lib/http/client";
 import {
   sanitizeEmail,
   sanitizeSingleLine,
+  uppercaseText,
 } from "@/lib/security/sanitize";
 import type {
   CreateUserInput,
@@ -12,7 +13,7 @@ import type {
 function toUserPayload(input: CreateUserInput | UpdateUserInput) {
   return {
     ...(input.name !== undefined
-      ? { name: sanitizeSingleLine(input.name, 120) }
+      ? { name: sanitizeSingleLine(uppercaseText(input.name), 120) }
       : {}),
     ...(input.email !== undefined
       ? { email: sanitizeEmail(input.email) }

@@ -3,37 +3,69 @@ import { sanitizeSingleLine } from "@/lib/security/sanitize";
 import type {
   CreateSaleInput,
   Sale,
+  SaleConsultantSummary,
+  SaleListFilters,
+  SaleSummary,
   UpdateSaleInput,
 } from "@/types";
+
+function toFiltersQuery(filters: SaleListFilters) {
+  return {
+    patientId: filters.patientId,
+    cityId: filters.cityId,
+    consultantId: filters.consultantId,
+    from: filters.from,
+    to: filters.to,
+  };
+}
 
 function toCreatePayload(input: CreateSaleInput) {
   return {
     patientId: input.patientId,
     packageId: input.packageId,
-    ...(input.consultantId ? { consultantId: input.consultantId } : {}),
     value: sanitizeSingleLine(input.value, 40),
-    ...(input.discount ? { discount: sanitizeSingleLine(input.discount, 40) } : {}),
+    ...(input.discount
+      ? { discount: sanitizeSingleLine(input.discount, 40) }
+      : {}),
   };
 }
 
 function toUpdatePayload(input: UpdateSaleInput) {
   return {
-    ...(input.consultantId !== undefined
-      ? { consultantId: input.consultantId || null }
-      : {}),
     ...(input.value !== undefined
       ? { value: sanitizeSingleLine(input.value, 40) }
       : {}),
     ...(input.discount !== undefined
-      ? { discount: input.discount ? sanitizeSingleLine(input.discount, 40) : null }
+      ? {
+          discount: input.discount
+            ? sanitizeSingleLine(input.discount, 40)
+            : null,
+        }
       : {}),
   };
 }
 
 export const salesService = {
-  listByPatient(patientId: string, options?: { signal?: AbortSignal }) {
+  list(filters: SaleListFilters = {}, options?: { signal?: AbortSignal }) {
     return http.get<Sale[]>("sales", {
-      query: { patientId },
+      query: toFiltersQuery(filters),
+      signal: options?.signal,
+    });
+  },
+
+  listByPatient(patientId: string, options?: { signal?: AbortSignal }) {
+    return this.list({ patientId }, options);
+  },
+
+  summary(filters: SaleListFilters = {}, options?: { signal?: AbortSignal }) {
+    return http.get<SaleSummary>("sales/summary", {
+      query: toFiltersQuery(filters),
+      signal: options?.signal,
+    });
+  },
+
+  consultants(options?: { signal?: AbortSignal }) {
+    return http.get<SaleConsultantSummary[]>("sales/consultants", {
       signal: options?.signal,
     });
   },

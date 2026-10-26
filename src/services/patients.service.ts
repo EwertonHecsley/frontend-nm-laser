@@ -3,6 +3,7 @@ import {
   onlyDigits,
   sanitizeSingleLine,
   sanitizeText,
+  uppercaseText,
 } from "@/lib/security/sanitize";
 import type {
   CreatePatientInput,
@@ -16,10 +17,10 @@ function toCreatePayload(input: CreatePatientInput) {
   const whatsapp = input.whatsapp ? onlyDigits(input.whatsapp) : "";
 
   return {
-    fullName: sanitizeSingleLine(input.fullName, 180),
+    fullName: sanitizeSingleLine(uppercaseText(input.fullName), 180),
     birthDate: input.birthDate,
     cpf: onlyDigits(input.cpf),
-    address: sanitizeText(input.address).slice(0, 240),
+    address: sanitizeText(uppercaseText(input.address)).slice(0, 240),
     cityId: input.cityId,
     ...(whatsapp ? { whatsapp } : {}),
   };
@@ -28,11 +29,13 @@ function toCreatePayload(input: CreatePatientInput) {
 function toUpdatePayload(input: UpdatePatientInput) {
   return {
     ...(input.fullName !== undefined
-      ? { fullName: sanitizeSingleLine(input.fullName, 180) }
+      ? { fullName: sanitizeSingleLine(uppercaseText(input.fullName), 180) }
       : {}),
     ...(input.birthDate !== undefined ? { birthDate: input.birthDate } : {}),
     ...(input.address !== undefined
-      ? { address: sanitizeText(input.address).slice(0, 240) }
+      ? {
+          address: sanitizeText(uppercaseText(input.address)).slice(0, 240),
+        }
       : {}),
     ...(input.cityId !== undefined ? { cityId: input.cityId } : {}),
     ...(input.whatsapp !== undefined

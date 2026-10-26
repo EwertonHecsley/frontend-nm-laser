@@ -13,6 +13,10 @@ export function sanitizeEmail(value: string): string {
   return sanitizeText(value).toLowerCase();
 }
 
+export function uppercaseText(value: string): string {
+  return value.toLocaleUpperCase("pt-BR");
+}
+
 export function onlyDigits(value: string): string {
   return value.replace(/\D/g, "");
 }

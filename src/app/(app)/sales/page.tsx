@@ -31,6 +31,7 @@ export default async function SalesPage({ searchParams }: SalesPageProps) {
     <SalesView
       initialPatientId={initialPatientId}
       canWrite={hasPermission(user.role, "sales:write")}
+      isManager={user.role === "gestora"}
     />
   );
 }

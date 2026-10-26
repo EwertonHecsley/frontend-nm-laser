@@ -85,7 +85,6 @@ export function SaleForm({
     defaultValues: {
       patientId: initialPatientId,
       packageId: "",
-      consultantId: "",
       value: "",
       discount: "",
     },
@@ -102,7 +101,6 @@ export function SaleForm({
       reset({
         patientId: sale.patientId,
         packageId: sale.packageId ?? "",
-        consultantId: sale.consultantId ?? "",
         value: sale.value,
         discount: sale.discount ?? "",
       });
@@ -114,12 +112,10 @@ export function SaleForm({
     const discount = values.discount
       ? values.discount.replace(",", ".")
       : undefined;
-    const consultantId = values.consultantId.trim();
 
     try {
       if (isEdit) {
         await salesService.update(saleId, {
-          consultantId: consultantId || null,
           value,
           discount: discount ?? null,
         });
@@ -131,7 +127,6 @@ export function SaleForm({
         await salesService.create({
           patientId: values.patientId,
           packageId: values.packageId,
-          consultantId: consultantId || undefined,
           value,
           discount,
         });
@@ -191,8 +186,8 @@ export function SaleForm({
         <CardTitle>{isEdit ? "Dados da venda" : "Registrar venda"}</CardTitle>
         <CardDescription>
           {isEdit
-            ? "Atualize o valor, o desconto ou o consultor responsável."
-            : "Vincule um pacote à paciente para liberar o saldo das sessões."}
+            ? "Atualize o valor ou o desconto da venda."
+            : "Vincule um pacote à paciente para liberar o saldo das sessões. O consultor é registrado automaticamente."}
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -306,31 +301,6 @@ export function SaleForm({
                 {...register("discount")}
               />
               <FieldError errors={[errors.discount]} />
-            </Field>
-
-            <Field
-              className="sm:col-span-2"
-              data-invalid={Boolean(errors.consultantId)}
-            >
-              <FieldLabel htmlFor="sale-consultant">
-                Consultor (opcional)
-              </FieldLabel>
-              <Input
-                id="sale-consultant"
-                placeholder="UUID do consultor"
-                autoComplete="off"
-                className="h-11"
-                aria-invalid={Boolean(errors.consultantId)}
-                {...register("consultantId")}
-              />
-              {errors.consultantId ? (
-                <FieldError errors={[errors.consultantId]} />
-              ) : (
-                <FieldDescription>
-                  O backend não expõe listagem de usuários; informe o UUID do
-                  consultor ou deixe em branco.
-                </FieldDescription>
-              )}
             </Field>
           </FieldGroup>
 

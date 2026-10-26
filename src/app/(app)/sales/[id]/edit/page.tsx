@@ -38,7 +38,7 @@ export default async function EditSalePage({ params }: EditSalePageProps) {
     <div className="space-y-6">
       <PageHeader
         title="Editar venda"
-        description="Atualize o valor, o desconto ou o consultor responsável."
+        description="Atualize o valor ou o desconto da venda."
         actions={
           <Button variant="outline" asChild>
             <Link href="/sales">

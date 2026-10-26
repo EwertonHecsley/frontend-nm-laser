@@ -1,13 +1,5 @@
 import { z } from "zod";
 
-import { isUuid } from "@/features/appointments/utils";
-
-const optionalUuid = (message: string) =>
-  z
-    .string()
-    .trim()
-    .refine((value) => value === "" || isUuid(value), message);
-
 const moneyPattern = /^\d{1,9}([.,]\d{1,2})?$/;
 
 const money = z
@@ -29,7 +21,6 @@ const optionalMoney = z
 export const saleFormSchema = z.object({
   patientId: z.string().min(1, "Selecione a paciente."),
   packageId: z.string().min(1, "Selecione o pacote."),
-  consultantId: optionalUuid("Informe um UUID de consultor válido."),
   value: money,
   discount: optionalMoney,
 });
