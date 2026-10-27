@@ -33,6 +33,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
+import { PatientCombobox } from "@/features/appointments/components/patient-combobox";
 import {
   formatCurrency,
   SaleCard,
@@ -42,7 +43,7 @@ import { useApiQuery, usePagination } from "@/hooks";
 import { formatDate } from "@/lib/format/date";
 import { onlyDigits } from "@/lib/security/sanitize";
 import { formatPhone } from "@/features/patients/utils";
-import { packagesService, salesService } from "@/services";
+import { citiesService, packagesService, salesService } from "@/services";
 import type { PaymentMethod, Sale, SaleListFilters } from "@/types";
 
 type PeriodPreset =
@@ -61,6 +62,7 @@ const PERIOD_OPTIONS: readonly { value: PeriodPreset; label: string }[] = [
 ];
 
 const DAY_IN_MS = 24 * 60 * 60 * 1000;
+const ALL_CITIES = "all";
 const ALL_PACKAGES = "all";
 const ALL_PAYMENT_METHODS = "all";
 
@@ -326,27 +328,43 @@ function ClientCard({ client }: { client: VendorClientView }) {
 export function SalesVendorDashboard({ canWrite }: { canWrite: boolean }) {
   const [periodPreset, setPeriodPreset] =
     useState<PeriodPreset>("thisMonth");
+  const [cityId, setCityId] = useState("");
+  const [patientId, setPatientId] = useState("");
   const [packageId, setPackageId] = useState("");
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod | "">("");
   const clientFilters = useMemo<SaleListFilters>(
     () => ({
+      cityId: cityId || undefined,
+      patientId: patientId || undefined,
       packageId: packageId || undefined,
       paymentMethod: paymentMethod || undefined,
     }),
-    [packageId, paymentMethod],
+    [cityId, patientId, packageId, paymentMethod],
   );
   const summaryFilters = useMemo<SaleListFilters>(
     () => ({
       ...getPeriodFilters(periodPreset),
+      cityId: cityId || undefined,
+      patientId: patientId || undefined,
       packageId: packageId || undefined,
       paymentMethod: paymentMethod || undefined,
     }),
-    [packageId, paymentMethod, periodPreset],
+    [cityId, patientId, packageId, paymentMethod, periodPreset],
   );
-  const clientQueryKey = `${packageId}:${paymentMethod}`;
-  const summaryQueryKey = `${periodPreset}:${packageId}:${paymentMethod}`;
-  const hasFilters = Boolean(
-    periodPreset !== "thisMonth" || packageId || paymentMethod,
+  const clientQueryKey = `${cityId}:${patientId}:${packageId}:${paymentMethod}`;
+  const summaryQueryKey = `${periodPreset}:${cityId}:${patientId}:${packageId}:${paymentMethod}`;
+  const hasClientFilters = Boolean(
+    cityId || patientId || packageId || paymentMethod,
+  );
+  const hasFilters = periodPreset !== "thisMonth" || hasClientFilters;
+
+  const {
+    data: cities,
+    isLoading: isLoadingCities,
+    refetch: refetchCities,
+  } = useApiQuery(
+    (signal) => citiesService.list({ signal }),
+    "vendor-sales-cities",
   );
 
   const {
@@ -378,6 +396,13 @@ export function SalesVendorDashboard({ canWrite }: { canWrite: boolean }) {
     `vendor-sales-summary:${summaryQueryKey}`,
   );
 
+  const cityOptions = useMemo(
+    () =>
+      [...(cities ?? [])].sort((a, b) =>
+        a.name.localeCompare(b.name, "pt-BR"),
+      ),
+    [cities],
+  );
   const clients = useMemo(
     () => prioritizeClients(aggregateClients(allSales ?? [])),
     [allSales],
@@ -414,6 +439,7 @@ export function SalesVendorDashboard({ canWrite }: { canWrite: boolean }) {
       : null;
 
   function refetchAll() {
+    refetchCities();
     refetchPackages();
     refetchSales();
     refetchSummary();
@@ -421,6 +447,8 @@ export function SalesVendorDashboard({ canWrite }: { canWrite: boolean }) {
 
   function clearFilters() {
     setPeriodPreset("thisMonth");
+    setCityId("");
+    setPatientId("");
     setPackageId("");
     setPaymentMethod("");
   }
@@ -432,8 +460,8 @@ export function SalesVendorDashboard({ canWrite }: { canWrite: boolean }) {
           <CardTitle className="text-base">Resumo das minhas vendas</CardTitle>
           <CardDescription>
             A carteira de clientes considera todo o histórico de vendas, com os
-            filtros de pacote e forma de pagamento; o resumo abaixo também
-            segue o período selecionado.
+            filtros de cidade, cliente, pacote e forma de pagamento; o resumo
+            abaixo também segue o período selecionado.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -457,6 +485,37 @@ export function SalesVendorDashboard({ canWrite }: { canWrite: boolean }) {
                   ))}
                 </SelectContent>
               </Select>
+            </Field>
+            <Field>
+              <FieldLabel htmlFor="vendor-sales-city">Cidade</FieldLabel>
+              <Select
+                value={cityId || ALL_CITIES}
+                onValueChange={(value) =>
+                  setCityId(value === ALL_CITIES ? "" : value)
+                }
+                disabled={isLoadingCities}
+              >
+                <SelectTrigger id="vendor-sales-city" className="h-11 w-full">
+                  <SelectValue placeholder="Todas as cidades" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={ALL_CITIES}>Todas as cidades</SelectItem>
+                  {cityOptions.map((city) => (
+                    <SelectItem key={city.id} value={city.id}>
+                      {city.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </Field>
+            <Field>
+              <FieldLabel htmlFor="vendor-sales-client">Cliente</FieldLabel>
+              <PatientCombobox
+                id="vendor-sales-client"
+                value={patientId}
+                placeholder="Todos os clientes"
+                onChange={setPatientId}
+              />
             </Field>
             <Field>
               <FieldLabel htmlFor="vendor-sales-package">Pacote</FieldLabel>
@@ -597,9 +656,15 @@ export function SalesVendorDashboard({ canWrite }: { canWrite: boolean }) {
                   <BadgeDollarSign className="size-6" aria-hidden="true" />
                 </span>
                 <div className="space-y-1">
-                  <p className="font-medium">Nenhuma venda registrada</p>
+                  <p className="font-medium">
+                    {hasClientFilters
+                      ? "Nenhum cliente encontrado"
+                      : "Nenhuma venda registrada"}
+                  </p>
                   <p className="text-sm text-muted-foreground">
-                    Registre sua primeira venda para acompanhar seus clientes.
+                    {hasClientFilters
+                      ? "Ajuste os filtros de cidade, cliente, pacote ou forma de pagamento."
+                      : "Registre sua primeira venda para acompanhar seus clientes."}
                   </p>
                 </div>
                 {canWrite && (
