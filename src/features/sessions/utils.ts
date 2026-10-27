@@ -47,12 +47,25 @@ export function sortSessionsByPerformedAt(
   );
 }
 
+export function sortSessionsByNumber(
+  sessions: readonly SessionOverviewItem[],
+): SessionOverviewItem[] {
+  return [...sessions].sort(
+    (a, b) =>
+      a.sessionNumber.localeCompare(b.sessionNumber, "pt-BR", {
+        numeric: true,
+        sensitivity: "base",
+      }) ||
+      new Date(a.performedAt).getTime() - new Date(b.performedAt).getTime(),
+  );
+}
+
 export function shortId(value: string | null): string {
   return value ? `${value.slice(0, 8)}…` : "—";
 }
 
 
-export function groupSessionsByMother(
+export function groupSessionsByTreatment(
   sessions: readonly SessionOverviewItem[],
 ): SessionGroupSummary[] {
   const groups = new Map<string, SessionGroupSummary>();

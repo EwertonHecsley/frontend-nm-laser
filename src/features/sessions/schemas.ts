@@ -45,7 +45,7 @@ export const sessionFormSchema = z
     status: z.enum(["completed", "in_progress", "cancelled"]),
     appointmentId: optionalUuid("Informe um UUID de agendamento válido."),
     saleId: optionalUuid("Informe um UUID de venda válido."),
-    groupId: optionalUuid("Informe um UUID de sessão mãe válido."),
+    groupId: optionalUuid("Informe um UUID de tratamento pessoal válido."),
     areaIds: z.array(z.string()),
     sessionNumber: z
       .string()

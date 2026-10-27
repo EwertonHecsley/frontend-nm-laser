@@ -6,7 +6,7 @@ import { hasPermission } from "@/lib/auth/permissions";
 import { getServerSession } from "@/lib/auth/session";
 
 export const metadata = {
-  title: "Sessão mãe",
+  title: "Tratamento pessoal",
 };
 
 interface SessionGroupPageProps {

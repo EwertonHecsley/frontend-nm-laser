@@ -29,6 +29,7 @@ import { Pagination } from "@/components/ui/pagination";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EditSessionDialog } from "@/features/sessions/components/edit-session-dialog";
 import { SessionCard } from "@/features/sessions/components/session-card";
+import { sortSessionsByNumber } from "@/features/sessions/utils";
 import { useApiQuery, usePagination } from "@/hooks";
 import { formatDateTime } from "@/lib/format/date";
 import { getErrorMessage } from "@/lib/http/errors";
@@ -127,7 +128,10 @@ export function SessionGroupDetailView({
     { enabled: Boolean(patientId) },
   );
 
-  const sessions = useMemo(() => data?.sessions ?? [], [data]);
+  const sessions = useMemo(
+    () => sortSessionsByNumber(data?.sessions ?? []),
+    [data],
+  );
   const appointmentsById = useMemo(
     () =>
       new Map(
@@ -188,7 +192,9 @@ export function SessionGroupDetailView({
   return (
     <div className="space-y-6">
       <PageHeader
-        title={group ? `Sessão mãe ${group.code}` : "Sessão mãe"}
+        title={
+          group ? `Tratamento pessoal ${group.code}` : "Tratamento pessoal"
+        }
         description={
           group
             ? `${group.patient.fullName} · ${group.packageName ?? "Sem pacote vinculado"}`
@@ -223,7 +229,9 @@ export function SessionGroupDetailView({
       ) : error ? (
         <Alert variant="destructive">
           <AlertTriangle className="size-4" />
-          <AlertTitle>Não foi possível carregar a sessão mãe</AlertTitle>
+          <AlertTitle>
+            Não foi possível carregar o tratamento pessoal
+          </AlertTitle>
           <AlertDescription className="space-y-3">
             <p>{error}</p>
             <Button type="button" size="sm" onClick={retry}>
@@ -239,7 +247,7 @@ export function SessionGroupDetailView({
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div className="space-y-1">
                   <CardTitle className="text-base">
-                    Informações da sessão mãe
+                    Informações do tratamento pessoal
                   </CardTitle>
                   <CardDescription>
                     Código único do atendimento do cliente.
@@ -315,7 +323,8 @@ export function SessionGroupDetailView({
                     Nenhuma sessão individual registrada
                   </p>
                   <p className="text-sm text-muted-foreground">
-                    Registre a primeira sessão individual desta sessão mãe.
+                    Registre a primeira sessão individual deste tratamento
+                    pessoal.
                   </p>
                 </div>
                 {canWrite && (

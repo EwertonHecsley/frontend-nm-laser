@@ -45,7 +45,7 @@ import { SessionGroupCard } from "@/features/sessions/components/session-group-c
 import { SessionOpportunities } from "@/features/sessions/components/session-opportunities";
 import {
   SESSION_STATUS_OPTIONS,
-  groupSessionsByMother,
+  groupSessionsByTreatment,
 } from "@/features/sessions/utils";
 import { useApiQuery, usePagination } from "@/hooks";
 import { toEndOfDayIso, toStartOfDayIso } from "@/lib/format/date";
@@ -177,8 +177,9 @@ function StatusDistribution({ stats }: { stats: SessionOverviewStats }) {
       <CardHeader>
         <CardTitle className="text-base">Distribuição por status</CardTitle>
         <CardDescription>
-          {stats.total} {stats.total === 1 ? "sessão" : "sessões"} no recorte
-          filtrado.
+          {stats.total}{" "}
+          {stats.total === 1 ? "sessão individual" : "sessões individuais"} no
+          recorte filtrado.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -297,9 +298,10 @@ export function SessionsView({
     [packageName, sessions],
   );
   const sessionGroups = useMemo(
-    () => groupSessionsByMother(packageFilteredSessions),
+    () => groupSessionsByTreatment(packageFilteredSessions),
     [packageFilteredSessions],
   );
+  const treatmentCount = sessionGroups.length;
   const filteredGroups = useMemo(
     () =>
       status === "all"
@@ -499,8 +501,10 @@ export function SessionsView({
           <div className="flex flex-wrap items-center justify-between gap-2">
             <p className="text-xs text-muted-foreground">
               {displayStats
-                ? `${displayStats.total} ${
-                    displayStats.total === 1 ? "sessão" : "sessões"
+                ? `${treatmentCount} ${
+                    treatmentCount === 1
+                      ? "tratamento pessoal"
+                      : "tratamentos pessoais"
                   } no recorte atual`
                 : "Carregando indicadores…"}
             </p>
@@ -545,9 +549,9 @@ export function SessionsView({
             </h2>
             <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
               <MetricCard
-                label="Total de sessões"
-                value={displayStats.total}
-                detail="Todos os status do recorte"
+                label="Total de tratamentos pessoais"
+                value={treatmentCount}
+                detail="Tratamentos com sessões individuais no recorte"
                 icon={ClipboardList}
                 active={status === "all"}
                 onClick={() => setStatus("all")}
@@ -607,18 +611,18 @@ export function SessionsView({
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div className="space-y-1">
                 <h2 id="session-history" className="text-lg font-semibold">
-                  Sessões mãe
+                  Tratamentos pessoais
                 </h2>
                 <p className="text-sm text-muted-foreground">
-                  Cada agrupamento reúne as sessões individuais de um pacote
+                  Cada tratamento reúne as sessões individuais de um pacote
                   contratado.
                 </p>
               </div>
               <Badge variant="secondary">
                 {filteredGroups.length}{" "}
                 {filteredGroups.length === 1
-                  ? "sessão mãe listada"
-                  : "sessões mãe listadas"}
+                  ? "tratamento pessoal listado"
+                  : "tratamentos pessoais listados"}
               </Badge>
             </div>
 
@@ -630,14 +634,14 @@ export function SessionsView({
                 <div className="space-y-1">
                   <p className="font-medium">
                     {hasFilters
-                      ? "Nenhuma sessão mãe corresponde aos filtros"
-                      : "Nenhuma sessão mãe registrada"}
+                      ? "Nenhum tratamento pessoal corresponde aos filtros"
+                      : "Nenhum tratamento pessoal registrado"}
                   </p>
                   <p className="text-sm text-muted-foreground">
                     {hasFilters
                       ? "Ajuste o paciente, o período ou o status selecionado."
                       : canWrite
-                        ? "Registre a primeira sessão para criar a sessão mãe do pacote."
+                        ? "Registre a primeira sessão para criar o tratamento pessoal do pacote."
                         : "Ainda não há sessões registradas."}
                   </p>
                 </div>

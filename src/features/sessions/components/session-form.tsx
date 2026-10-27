@@ -255,8 +255,8 @@ export function SessionForm({
                 <FieldError errors={[errors.sessionNumber]} />
               ) : (
                 <FieldDescription>
-                  Deixe em branco para numerar automaticamente dentro da
-                  sessão mãe.
+                  Deixe em branco para numerar automaticamente dentro do
+                  tratamento pessoal.
                 </FieldDescription>
               )}
             </Field>
