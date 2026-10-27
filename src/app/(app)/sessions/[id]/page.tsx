@@ -36,6 +36,7 @@ export default async function SessionGroupPage({
     <SessionGroupDetailView
       groupId={groupId}
       canWrite={hasPermission(user.role, "sessions:write")}
+      canDelete={hasPermission(user.role, "sessions:delete")}
       canCreateSale={hasPermission(user.role, "sales:write")}
     />
   );

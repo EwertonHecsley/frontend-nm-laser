@@ -1,10 +1,10 @@
 # CRM NM Laser — API Reference para o Frontend
 
 **Versão do documento:** 1.0  
-**Baseado no código-fonte enviado em 21/10/2026.**  
+**Baseado no código-fonte e nos testes locais em 27/10/2026.**
 **Objetivo:** orientar a integração do frontend com os endpoints que aparecem implementados no snapshot analisado.
 
-> Importante: este documento descreve o comportamento observável no código fornecido, não garante que o backend tenha sido executado ou testado. Recursos que existem apenas no schema do banco ou em documentação interna não são considerados endpoints disponíveis.
+> Importante: este documento descreve o comportamento observável no código e validado por build, lint e testes automatizados. Recursos que existem apenas no schema do banco não são considerados endpoints disponíveis.
 
 ## 1. Estado de implementação
 
@@ -27,26 +27,41 @@
 | GET | `/appointments` | Implementado | Qualquer usuário autenticado |
 | POST | `/appointments` | Implementado | `gestora`, `vendas`, `aplicadora` |
 | GET | `/appointments/:id` | Implementado | Qualquer usuário autenticado |
-| PATCH | `/appointments/:id` | Implementado | `gestora`, `vendas`, `aplicadora` |
+| DELETE | `/appointments/:id` | Implementado | `gestora`, `vendas`, `aplicadora` |
 | POST | `/sessions` | Implementado | `gestora`, `aplicadora` |
 | GET | `/sessions?patientId=...` | Implementado | Qualquer usuário autenticado |
 | GET | `/sessions/:id` | Implementado | Qualquer usuário autenticado |
 | PATCH | `/sessions/:id` | Implementado | `gestora`, `aplicadora` |
-| POST | `/sync` | Módulo registrado no `AppModule`; serviço ainda não aplica payload às entidades | Parcialmente disponível (idempotência apenas) |
+| DELETE | `/sessions/:id` | Implementado | `gestora` |
+| GET | `/areas` | Implementado | Qualquer usuário autenticado |
+| POST | `/areas` | Implementado | `gestora` |
+| GET | `/areas/:id` | Implementado | Qualquer usuário autenticado |
+| PATCH | `/areas/:id` | Implementado | `gestora` |
+| DELETE | `/areas/:id` | Implementado | `gestora` |
+| GET | `/packages` | Implementado | Qualquer usuário autenticado |
+| POST | `/packages` | Implementado | `gestora` |
+| GET | `/packages/:id` | Implementado | Qualquer usuário autenticado |
+| PATCH | `/packages/:id` | Implementado | `gestora` |
+| DELETE | `/packages/:id` | Implementado | `gestora` |
+| GET | `/sales` | Implementado | `gestora`, `vendas` |
+| GET | `/sales/summary` | Implementado | `gestora`, `vendas` |
+| GET | `/sales/consultants` | Implementado | `gestora` |
+| GET | `/sales/opportunities` | Implementado | `gestora`, `vendas`, `aplicadora` |
+| GET | `/sales/:id` | Implementado | `gestora`, `vendas` |
+| POST | `/sales` | Implementado | `gestora`, `vendas` |
+| PATCH | `/sales/:id` | Implementado | `gestora` |
+| DELETE | `/sales/:id` | Implementado | `gestora` |
+| GET | `/users` | Implementado | `gestora` |
+| POST | `/users` | Implementado | `gestora` |
+| GET | `/users/:id` | Implementado | `gestora` |
+| PATCH | `/users/:id` | Implementado | `gestora` |
+| DELETE | `/users/:id` | Implementado | `gestora` |
 
-### Endpoints que NÃO estão implementados neste snapshot
+### Fora do escopo
 
-Não foram encontrados controllers/endpoints de API para:
-- catálogo de áreas;
-- cadastro/consulta de tipos de pacote;
-- relacionamento de áreas do pacote;
-- vendas;
-- pagamentos/parcelas;
-- gestão de usuários;
+- pagamentos/parcelas (o faturamento é acompanhado pelas compras lançadas em `/sales`);
 - consulta de agenda com dados expandidos da paciente/profissional;
 - fluxo de criação de uma remarcação que preserve e relacione o agendamento anterior.
-
-Essas tabelas/entidades existirem no schema Drizzle não significa que a API REST correspondente esteja disponível.
 
 ## 2. URL, autenticação e formato
 
@@ -377,11 +392,17 @@ Retorna uma sessão ou `404`.
 
 Permissão: `gestora`, `aplicadora`.
 
-Permite editar os dados da sessão (status, agendamento vinculado, parâmetros técnicos, número da sessão, data/hora e observações).
+Permite editar os dados da sessão (status, agendamento/compra vinculados, áreas, parâmetros técnicos, número da sessão, data/hora, observações e assinatura).
 
-Body: campos opcionais a serem atualizados (`status`, `appointmentId`, `sessionNumber`, `performedAt`, `applicatorId`, `potency`, `frequency`, `technique`, `energyAccumulated`, `observations`, `signature`).
+Body: campos opcionais a serem atualizados (`status`, `appointmentId`, `saleId`, `areaIds`, `sessionNumber`, `performedAt`, `applicatorId`, `potency`, `frequency`, `technique`, `energyAccumulated`, `observations`, `signature`).
 
-Resposta: registro atualizado.
+A assinatura é opcional e aceita data URL de imagem ou texto legado, com limite de 120.000 caracteres.
+
+### `DELETE /sessions/:id`
+
+Permissão: `gestora`. Remove a sessão, suas áreas e o grupo de sessões quando ele fica sem sessões. O saldo consumido é recalculado a partir das sessões restantes.
+
+Resposta: `200 OK` com corpo vazio.
 
 
 ## 8. Health check
@@ -393,20 +414,9 @@ Resposta: registro atualizado.
 
 O health check está marcado como `@Public()` e não exige JWT.
 
-## 9. Sincronização offline — bloqueada no estado atual
+## 9. Offline e sincronização
 
-O código contém `SyncController`, `SyncService` e DTOs de sync, mas `SyncModule` não é importado em `AppModule`. Portanto, `POST /sync` não é registrado no snapshot enviado e não deve ser consumido pelo frontend ainda.
-
-Além disso, o serviço de sync atual apenas grava a chave em `sync_operations` e devolve `applied`/`duplicate`. Ele não aplica o `payload` às tabelas de pacientes/agendamentos/sessões. Isso não é sincronização funcional de dados.
-
-O contrato interno também diverge:
-- `docs/sync-contract.md` usa `entity`, `action`, `payload`, `expectedVersion`;
-- DTO atual usa `entityType`, `action`, `payload`, sem `expectedVersion`;
-- o serviço não verifica `expectedVersion`, não implementa conflitos reais e não devolve `entityId`, `version`, `conflict` ou `error` detalhado;
-- `idempotencyKey`, `entityType` e `action` são validados apenas como strings, sem regras de valores permitidos;
-- os IDs são gerados pelo servidor nos registros atuais; o contrato de IDs locais do frontend ainda não está implementado nos endpoints de criação.
-
-**Recomendação:** não ativar a fila offline contra esse endpoint até implementar e testar o contrato completo. O frontend pode construir a interface de estado offline, mas deve manter a sincronização de dados atrás de um adapter/feature flag até o contrato estar funcional.
+Não há suporte a offline/sincronização. O módulo `sync`, a rota `POST /sync` e a tabela `sync_operations` foram removidos. O sistema opera integralmente online.
 
 ## 10. Perfis e permissões efetivas no código
 
@@ -419,8 +429,15 @@ O contrato interno também diverge:
 | Excluir pacientes | Sim | Não | Não |
 | Consultar agendamentos | Sim | Sim | Sim |
 | Criar/editar agendamentos | Sim | Sim | Sim |
+| Excluir agendamentos sem sessão | Sim | Sim | Sim |
 | Criar sessão | Sim | Não | Sim |
+| Excluir sessões | Sim | Não | Não |
 | Consultar sessões | Sim | Sim | Sim |
+| Criar/editar áreas e pacotes | Sim | Não | Não |
+| Consultar áreas e pacotes | Sim | Sim | Sim |
+| Lançar compras | Sim | Sim | Não |
+| Editar/excluir compras | Sim | Não | Não |
+| Gerenciar equipe | Sim | Não | Não |
 
 A tabela reflete os decorators dos controllers enviados. Ela não substitui a validação de permissões de negócio, e não há escopo por cidade implementado nos controllers examinados.
 
@@ -443,11 +460,9 @@ As credenciais acima correspondem ao seed incluído no código e são apenas par
 ## 12. Pendências recomendadas antes da integração completa
 
 ### P0 — bloqueia fluxos centrais
-1. Importar `SyncModule` no `AppModule` somente quando o serviço de sync estiver funcional; atualmente a rota não existe.
-2. Implementar sincronização real, incluindo aplicação das operações às entidades, IDs de cliente, idempotência, versionamento e conflitos.
-3. Corrigir o status padrão do agendamento para um estado apropriado de agendamento futuro, após confirmar a regra com a gestora.
-4. Definir o vínculo transacional entre sessão realizada, status do agendamento e consumo do saldo.
-5. Implementar endpoints/fluxos de pacotes, áreas, vendas e pagamentos se fizerem parte do MVP.
+1. Corrigir o status padrão do agendamento para um estado apropriado de agendamento futuro, após confirmar a regra com a gestora.
+2. Definir o vínculo transacional entre sessão realizada, status do agendamento e consumo do saldo.
+3. Manter o módulo de pagamentos fora do escopo: o faturamento é acompanhado pelas compras lançadas em vendas.
 
 ### P1 — segurança e consistência
 1. Definir se `/health` deve ser público e aplicar `@Public()` se necessário.

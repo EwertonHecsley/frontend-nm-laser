@@ -12,6 +12,7 @@ import {
 import { useMemo, useState } from "react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -37,8 +38,10 @@ import { SalesInsights } from "@/features/sales/components/sales-insights";
 import { PAYMENT_METHOD_OPTIONS } from "@/features/sales/utils";
 import { useApiQuery, usePagination } from "@/hooks";
 import { toEndOfDayIso, toStartOfDayIso } from "@/lib/format/date";
+import { getErrorMessage } from "@/lib/http/errors";
 import { citiesService, packagesService, salesService } from "@/services";
-import type { PaymentMethod, SaleListFilters } from "@/types";
+import type { PaymentMethod, Sale, SaleListFilters } from "@/types";
+import { toast } from "sonner";
 
 const ALL_CITIES = "all";
 const ALL_CONSULTANTS = "all";
@@ -118,6 +121,8 @@ export function SalesManagerDashboard({ canWrite }: { canWrite: boolean }) {
   const [patientId, setPatientId] = useState("");
   const [packageId, setPackageId] = useState("");
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod | "">("");
+  const [saleToDelete, setSaleToDelete] = useState<Sale | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const from = toStartOfDayIso(period.from) ?? "";
   const to = toEndOfDayIso(period.to) ?? "";
@@ -207,6 +212,22 @@ export function SalesManagerDashboard({ canWrite }: { canWrite: boolean }) {
     totalItems: salesTotalItems,
     setPage: setSalesPage,
   } = usePagination(sales ?? [], { resetKey: queryKey });
+
+  async function handleDelete() {
+    if (!saleToDelete) return;
+
+    setIsDeleting(true);
+    try {
+      await salesService.remove(saleToDelete.id);
+      toast.success("Compra excluída.");
+      setSaleToDelete(null);
+      refetchAll();
+    } catch (deleteError) {
+      toast.error(getErrorMessage(deleteError));
+    } finally {
+      setIsDeleting(false);
+    }
+  }
 
   function refetchAll() {
     refetchCities();
@@ -529,7 +550,13 @@ export function SalesManagerDashboard({ canWrite }: { canWrite: boolean }) {
             ) : (
               <div className="space-y-4">
                 {salePageItems.map((sale) => (
-                  <SaleCard key={sale.id} sale={sale} canEdit={canWrite} />
+                  <SaleCard
+                    key={sale.id}
+                    sale={sale}
+                    canEdit={canWrite}
+                    canDelete={canWrite}
+                    onDelete={setSaleToDelete}
+                  />
                 ))}
                 <Pagination
                   page={salesPage}
@@ -541,6 +568,26 @@ export function SalesManagerDashboard({ canWrite }: { canWrite: boolean }) {
           </section>
         </>
       )}
+      <ConfirmDeleteDialog
+        open={Boolean(saleToDelete)}
+        onOpenChange={(open) => {
+          if (!open) setSaleToDelete(null);
+        }}
+        title="Excluir compra?"
+        description={
+          <>
+            A compra de{" "}
+            <strong className="font-medium text-foreground">
+              {saleToDelete?.patient?.fullName ?? "cliente"}
+            </strong>{" "}
+            será removida permanentemente e deixará de compor o faturamento.
+            Compras com tratamentos, sessões ou pagamentos vinculados não podem
+            ser excluídas.
+          </>
+        }
+        isDeleting={isDeleting}
+        onConfirm={() => void handleDelete()}
+      />
     </div>
   );
 }

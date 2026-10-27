@@ -35,6 +35,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { PatientCombobox } from "@/features/appointments/components/patient-combobox";
 import { getAppointmentStatusLabel } from "@/features/appointments/utils";
 import { SessionPackageFields } from "@/features/sessions/components/session-package-fields";
+import { SignatureField } from "@/features/sessions/components/signature-field";
 import {
   sessionFormSchema,
   type SessionFormValues,
@@ -453,17 +454,24 @@ export function SessionForm({
               className="sm:col-span-2"
               data-invalid={Boolean(errors.signature)}
             >
-              <FieldLabel htmlFor="signature">Assinatura</FieldLabel>
-              <Textarea
-                id="signature"
-                rows={3}
-                placeholder="Assinatura digital ou texto de confirmação."
-                aria-invalid={Boolean(errors.signature)}
-                {...register("signature")}
+              <FieldLabel htmlFor="signature">Assinatura (opcional)</FieldLabel>
+              <Controller
+                control={control}
+                name="signature"
+                render={({ field }) => (
+                  <SignatureField
+                    id="signature"
+                    value={field.value}
+                    disabled={isSubmitting}
+                    onChange={field.onChange}
+                  />
+                )}
               />
               <FieldError errors={[errors.signature]} />
               <FieldDescription>
-                Conteúdo tratado como texto; o backend não define o formato.
+                A cliente pode assinar com o dedo ou caneta no tablet/celular.
+                Se preferir, digite o nome para gerar a assinatura
+                automaticamente.
               </FieldDescription>
             </Field>
           </FieldGroup>

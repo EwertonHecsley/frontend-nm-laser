@@ -7,11 +7,13 @@ import {
   Plus,
   RefreshCw,
   Search,
+  Trash2,
 } from "lucide-react";
 import Link from "next/link";
 import { useDeferredValue, useMemo, useState } from "react";
 
 import { PageHeader } from "@/components/layout/page-header";
+import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -27,11 +29,17 @@ import { Pagination } from "@/components/ui/pagination";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useApiQuery, usePagination } from "@/hooks";
 import { formatCurrency } from "@/lib/format/currency";
+import { getErrorMessage } from "@/lib/http/errors";
 import { packagesService } from "@/services";
+import type { LaserPackage } from "@/types";
+import { toast } from "sonner";
 
 export function PackagesView({ canManage }: { canManage: boolean }) {
   const [search, setSearch] = useState("");
   const deferredSearch = useDeferredValue(search);
+  const [packageToDelete, setPackageToDelete] =
+    useState<LaserPackage | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const { data, error, isLoading, refetch } = useApiQuery(
     (signal) => packagesService.list({ signal }),
@@ -51,6 +59,22 @@ export function PackagesView({ canManage }: { canManage: boolean }) {
     filteredPackages,
     { resetKey: deferredSearch },
   );
+
+  async function handleDelete() {
+    if (!packageToDelete) return;
+
+    setIsDeleting(true);
+    try {
+      await packagesService.remove(packageToDelete.id);
+      toast.success(`Pacote "${packageToDelete.name}" excluído.`);
+      setPackageToDelete(null);
+      refetch();
+    } catch (deleteError) {
+      toast.error(getErrorMessage(deleteError));
+    } finally {
+      setIsDeleting(false);
+    }
+  }
 
   const createAction = canManage ? (
     <Button asChild>
@@ -163,17 +187,28 @@ export function PackagesView({ canManage }: { canManage: boolean }) {
                           </CardDescription>
                         </div>
                         {canManage && (
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="icon-sm"
-                            asChild
-                            aria-label={`Editar ${pkg.name}`}
-                          >
-                            <Link href={`/packages/${pkg.id}/edit`}>
-                              <Pencil className="size-4" />
-                            </Link>
-                          </Button>
+                          <div className="flex items-center gap-1">
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="icon-sm"
+                              asChild
+                              aria-label={`Editar ${pkg.name}`}
+                            >
+                              <Link href={`/packages/${pkg.id}/edit`}>
+                                <Pencil className="size-4" />
+                              </Link>
+                            </Button>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="icon-sm"
+                              aria-label={`Excluir ${pkg.name}`}
+                              onClick={() => setPackageToDelete(pkg)}
+                            >
+                              <Trash2 className="size-4 text-destructive" />
+                            </Button>
+                          </div>
                         )}
                       </div>
                     </CardHeader>
@@ -222,6 +257,26 @@ export function PackagesView({ canManage }: { canManage: boolean }) {
           )}
         </CardContent>
       </Card>
+
+      <ConfirmDeleteDialog
+        open={Boolean(packageToDelete)}
+        onOpenChange={(open) => {
+          if (!open) setPackageToDelete(null);
+        }}
+        title="Excluir pacote?"
+        description={
+          <>
+            O pacote{" "}
+            <strong className="font-medium text-foreground">
+              {packageToDelete?.name}
+            </strong>{" "}
+            será removido permanentemente. Pacotes já vendidos não podem ser
+            excluídos.
+          </>
+        }
+        isDeleting={isDeleting}
+        onConfirm={() => void handleDelete()}
+      />
     </div>
   );
 }

@@ -32,6 +32,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { getAppointmentStatusLabel } from "@/features/appointments/utils";
 import { SessionPackageFields } from "@/features/sessions/components/session-package-fields";
+import { SignatureField } from "@/features/sessions/components/signature-field";
 import {
   editSessionFormSchema,
   type EditSessionFormValues,
@@ -386,13 +387,20 @@ export function EditSessionDialog({
               className="sm:col-span-2"
               data-invalid={Boolean(errors.signature)}
             >
-              <FieldLabel htmlFor="edit-signature">Assinatura</FieldLabel>
-              <Textarea
-                id="edit-signature"
-                rows={2}
-                placeholder="Assinatura digital ou texto de confirmação."
-                aria-invalid={Boolean(errors.signature)}
-                {...register("signature")}
+              <FieldLabel htmlFor="edit-signature">
+                Assinatura (opcional)
+              </FieldLabel>
+              <Controller
+                control={control}
+                name="signature"
+                render={({ field }) => (
+                  <SignatureField
+                    id="edit-signature"
+                    value={field.value}
+                    disabled={isSubmitting}
+                    onChange={field.onChange}
+                  />
+                )}
               />
               <FieldError errors={[errors.signature]} />
             </Field>

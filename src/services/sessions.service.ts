@@ -157,5 +157,9 @@ export const sessionsService = {
       toUpdatePayload(input),
     );
   },
+
+  remove(id: string) {
+    return http.delete(`sessions/${encodeURIComponent(id)}`);
+  },
 };
 

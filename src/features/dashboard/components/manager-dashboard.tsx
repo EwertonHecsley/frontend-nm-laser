@@ -25,6 +25,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useApiQuery } from "@/hooks";
+import { formatCurrency } from "@/lib/format/currency";
 import { toEndOfDayIso, toStartOfDayIso } from "@/lib/format/date";
 import { reportsService } from "@/services/reports.service";
 import type { Appointment, AppointmentStatus } from "@/types";
@@ -290,6 +291,10 @@ export function ManagerDashboard() {
   );
   const statusCounts = data?.appointmentCounts;
   const flowAppointments = useMemo(() => data?.appointments ?? [], [data]);
+  const averageTicket =
+    data && data.financial.salesCount > 0
+      ? String(Number(data.financial.revenue) / data.financial.salesCount)
+      : null;
   const periodActions = [
     { label: "Hoje", preset: "today" },
     { label: "Últimos 7 dias", preset: "last7Days" },
@@ -455,20 +460,15 @@ export function ManagerDashboard() {
 
           <section aria-labelledby="report-finance" className="space-y-3">
             <h2 id="report-finance" className="text-lg font-semibold">
-              Visão financeira
+              Faturamento
             </h2>
-            <div className="grid gap-4 md:grid-cols-2">
+            <div className="grid gap-4 md:grid-cols-3">
               <Card>
                 <CardHeader className="flex-row items-start justify-between gap-3">
                   <div className="space-y-1">
-                    <CardDescription>Consultas / sessões pagas</CardDescription>
-                    <CardTitle className="text-2xl">
-                      {data.financial.paidAmount === null
-                        ? "Aguardando integração"
-                        : new Intl.NumberFormat("pt-BR", {
-                            style: "currency",
-                            currency: "BRL",
-                          }).format(data.financial.paidAmount)}
+                    <CardDescription>Faturamento no período</CardDescription>
+                    <CardTitle className="text-2xl tabular-nums">
+                      {formatCurrency(data.financial.revenue)}
                     </CardTitle>
                   </div>
                   <CircleDollarSign
@@ -476,26 +476,16 @@ export function ManagerDashboard() {
                     aria-hidden="true"
                   />
                 </CardHeader>
-                <CardContent className="space-y-2 text-sm text-muted-foreground">
-                  <p>
-                    {data.financial.paidConsultations === null
-                      ? "O backend ainda não disponibiliza pagamentos."
-                      : `${data.financial.paidConsultations} consultas pagas`}
-                  </p>
-                  <Badge variant="outline">Sem dados financeiros</Badge>
+                <CardContent className="text-sm text-muted-foreground">
+                  Valor das compras lançadas menos os descontos concedidos.
                 </CardContent>
               </Card>
               <Card>
                 <CardHeader className="flex-row items-start justify-between gap-3">
                   <div className="space-y-1">
-                    <CardDescription>Valores em aberto</CardDescription>
-                    <CardTitle className="text-2xl">
-                      {data.financial.outstandingAmount === null
-                        ? "Aguardando integração"
-                        : new Intl.NumberFormat("pt-BR", {
-                            style: "currency",
-                            currency: "BRL",
-                          }).format(data.financial.outstandingAmount)}
+                    <CardDescription>Compras lançadas</CardDescription>
+                    <CardTitle className="text-2xl tabular-nums">
+                      {data.financial.salesCount}
                     </CardTitle>
                   </div>
                   <CircleDollarSign
@@ -503,15 +493,27 @@ export function ManagerDashboard() {
                     aria-hidden="true"
                   />
                 </CardHeader>
-                <CardContent className="space-y-2 text-sm text-muted-foreground">
-                  <p>
-                    {data.financial.appointmentsWithoutPaymentData} agendamento
-                    {data.financial.appointmentsWithoutPaymentData === 1
-                      ? ""
-                      : "s"}{" "}
-                    sem informação de pagamento no período.
-                  </p>
-                  <Badge variant="outline">Estimativa monetária indisponível</Badge>
+                <CardContent className="text-sm text-muted-foreground">
+                  {data.financial.salesCount === 0
+                    ? "Nenhuma compra registrada no período."
+                    : `${formatCurrency(data.financial.totalDiscount)} em descontos no período.`}
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader className="flex-row items-start justify-between gap-3">
+                  <div className="space-y-1">
+                    <CardDescription>Ticket médio</CardDescription>
+                    <CardTitle className="text-2xl tabular-nums">
+                      {averageTicket ? formatCurrency(averageTicket) : "—"}
+                    </CardTitle>
+                  </div>
+                  <CircleDollarSign
+                    className="size-5 text-muted-foreground"
+                    aria-hidden="true"
+                  />
+                </CardHeader>
+                <CardContent className="text-sm text-muted-foreground">
+                  Faturamento dividido pela quantidade de compras.
                 </CardContent>
               </Card>
             </div>

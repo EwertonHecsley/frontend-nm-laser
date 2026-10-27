@@ -1,6 +1,6 @@
 "use client";
 
-import { Pencil } from "lucide-react";
+import { Pencil, Trash2 } from "lucide-react";
 import Link from "next/link";
 
 import { Badge } from "@/components/ui/badge";
@@ -22,9 +22,13 @@ export { formatCurrency };
 export function SaleCard({
   sale,
   canEdit,
+  canDelete = false,
+  onDelete,
 }: {
   sale: Sale;
   canEdit: boolean;
+  canDelete?: boolean;
+  onDelete?: (sale: Sale) => void;
 }) {
   const totalRemaining = sale.areas.reduce(
     (sum, area) => sum + area.remaining,
@@ -58,6 +62,18 @@ export function SaleCard({
                   <Pencil className="size-3.5" />
                   Editar
                 </Link>
+              </Button>
+            )}
+            {canDelete && onDelete && (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="h-8 gap-1.5 text-destructive hover:text-destructive"
+                onClick={() => onDelete(sale)}
+              >
+                <Trash2 className="size-3.5" />
+                Excluir
               </Button>
             )}
           </div>

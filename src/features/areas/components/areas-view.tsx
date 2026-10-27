@@ -7,11 +7,13 @@ import {
   RefreshCw,
   ScanLine,
   Search,
+  Trash2,
 } from "lucide-react";
 import Link from "next/link";
 import { useDeferredValue, useMemo, useState } from "react";
 
 import { PageHeader } from "@/components/layout/page-header";
+import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -35,11 +37,16 @@ import {
 } from "@/components/ui/table";
 import { useApiQuery, usePagination } from "@/hooks";
 import { formatDate } from "@/lib/format/date";
+import { getErrorMessage } from "@/lib/http/errors";
 import { areasService } from "@/services";
+import type { Area } from "@/types";
+import { toast } from "sonner";
 
 export function AreasView({ canManage }: { canManage: boolean }) {
   const [search, setSearch] = useState("");
   const deferredSearch = useDeferredValue(search);
+  const [areaToDelete, setAreaToDelete] = useState<Area | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const { data, error, isLoading, refetch } = useApiQuery(
     (signal) => areasService.list({ signal }),
@@ -59,6 +66,22 @@ export function AreasView({ canManage }: { canManage: boolean }) {
     filteredAreas,
     { resetKey: deferredSearch },
   );
+
+  async function handleDelete() {
+    if (!areaToDelete) return;
+
+    setIsDeleting(true);
+    try {
+      await areasService.remove(areaToDelete.id);
+      toast.success(`Área "${areaToDelete.name}" excluída.`);
+      setAreaToDelete(null);
+      refetch();
+    } catch (deleteError) {
+      toast.error(getErrorMessage(deleteError));
+    } finally {
+      setIsDeleting(false);
+    }
+  }
 
   const createAction = canManage ? (
     <Button asChild>
@@ -175,17 +198,28 @@ export function AreasView({ canManage }: { canManage: boolean }) {
                         <TableCell>
                           <div className="flex items-center justify-end">
                             {canManage ? (
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                size="icon-sm"
-                                asChild
-                                aria-label={`Editar ${area.name}`}
-                              >
-                                <Link href={`/areas/${area.id}/edit`}>
-                                  <Pencil className="size-4" />
-                                </Link>
-                              </Button>
+                              <div className="flex items-center gap-1">
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="icon-sm"
+                                  asChild
+                                  aria-label={`Editar ${area.name}`}
+                                >
+                                  <Link href={`/areas/${area.id}/edit`}>
+                                    <Pencil className="size-4" />
+                                  </Link>
+                                </Button>
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="icon-sm"
+                                  aria-label={`Excluir ${area.name}`}
+                                  onClick={() => setAreaToDelete(area)}
+                                >
+                                  <Trash2 className="size-4 text-destructive" />
+                                </Button>
+                              </div>
                             ) : (
                               <span className="text-xs text-muted-foreground">
                                 Somente leitura
@@ -207,6 +241,26 @@ export function AreasView({ canManage }: { canManage: boolean }) {
           )}
         </CardContent>
       </Card>
+
+      <ConfirmDeleteDialog
+        open={Boolean(areaToDelete)}
+        onOpenChange={(open) => {
+          if (!open) setAreaToDelete(null);
+        }}
+        title="Excluir área?"
+        description={
+          <>
+            A área{" "}
+            <strong className="font-medium text-foreground">
+              {areaToDelete?.name}
+            </strong>{" "}
+            será removida permanentemente. Áreas vinculadas a pacotes ou
+            sessões não podem ser excluídas.
+          </>
+        }
+        isDeleting={isDeleting}
+        onConfirm={() => void handleDelete()}
+      />
     </div>
   );
 }

@@ -64,7 +64,7 @@ src/
 ### Segurança
 
 - **Sessão HttpOnly:** o token JWT é gravado em cookie `HttpOnly` pela rota de login do BFF. O cliente usa apenas o cookie de sessão; a URL interna do backend não é exposta.
-- **BFF com allowlist:** `src/app/api/backend/[...path]/route.ts` só aceita os recursos `cities`, `patients`, `appointments` e `sessions`, valida método HTTP e aplica permissões por perfil antes de encaminhar. Métodos não mapeados são negados por padrão (`405`).
+- **BFF com allowlist:** `src/app/api/backend/[...path]/route.ts` só aceita recursos conhecidos (`cities`, `patients`, `appointments`, `sessions`, `areas`, `packages`, `sales` e `users`), valida método HTTP e aplica permissões por perfil antes de encaminhar. Métodos não mapeados são negados por padrão (`405`).
 - **Autorização em camadas:** proxy (`src/proxy.ts`), páginas de servidor, componentes e BFF checam permissões; a API continua sendo a autoridade final.
 - **Cabeçalhos de segurança:** CSP e demais headers configurados em `next.config.ts`.
 - **Sanitização:** entradas são normalizadas em `src/lib/security/sanitize.ts` antes do envio.
@@ -86,13 +86,17 @@ src/
 
 - **Cidades:** listagem, busca, criação, edição e exclusão.
 - **Pacientes:** listagem paginada com busca por nome/CPF, criação, edição, exclusão e atalho para o histórico de sessões.
-- **Agendamentos:** agenda com filtros por período, cidade e profissional, criação, edição e alteração rápida de status.
-- **Sessões:** registro de sessão com parâmetros técnicos e histórico por paciente.
+- **Agendamentos:** agenda com filtros por período, cidade e profissional, criação, edição, alteração rápida de status e exclusão de registros sem sessão vinculada.
+- **Sessões:** registro de sessão com parâmetros técnicos, assinatura opcional (desenho ou nome digitado) e histórico por paciente.
+- **Vendas:** lançamento de compras e acompanhamento de faturamento pela gestora.
+- **Catálogos:** áreas e pacotes com exclusão bloqueada quando houver vínculos.
+- **Equipe:** cadastro e exclusão de integrantes sem vínculos operacionais.
 
 ## Limitações conhecidas
 
 - O backend não expõe listagem de usuários/profissionais, então `professionalId` (agendamentos) e `applicatorId` (sessões) são informados como UUID opcional.
 - `GET /appointments` e `GET /sessions` não possuem paginação; listas extensas podem exigir evolução do contrato.
 - `PATCH /patients/:id` não aceita `cpf`; o campo é somente leitura na edição e nunca é enviado.
-- Não há endpoint de exclusão de agendamento nem edição de sessão.
-- A sincronização offline (`POST /sync`) do backend ainda é parcial; o frontend não ativa fila offline.
+- O sistema é totalmente web; não há modo offline nem sincronização.
+- Exclusões são permitidas apenas quando não há histórico ou vínculos que possam quebrar a integridade dos dados. Cidades, pacientes, áreas, pacotes, integrantes, agendamentos, sessões e compras possuem validação de vínculos no backend.
+- Pagamentos não serão implementados separadamente: a gestora acompanha o faturamento pelas compras lançadas.

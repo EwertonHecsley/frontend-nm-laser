@@ -1,6 +1,6 @@
 "use client";
 
-import { ClipboardList, Pencil } from "lucide-react";
+import { ClipboardList, Pencil, Trash2 } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -23,6 +23,7 @@ import {
   SESSION_STATUS_BADGE_VARIANTS,
   SESSION_STATUS_OPTIONS,
   getSessionStatusLabel,
+  isSignatureImage,
   shortId,
 } from "@/features/sessions/utils";
 import { formatDateTime } from "@/lib/format/date";
@@ -48,16 +49,20 @@ export function SessionCard({
   session,
   appointment,
   canWrite,
+  canDelete = false,
   isUpdating,
   onEdit,
   onStatusChange,
+  onDelete,
 }: {
   session: SessionOverviewItem;
   appointment?: Appointment;
   canWrite: boolean;
+  canDelete?: boolean;
   isUpdating: boolean;
   onEdit: (session: SessionOverviewItem) => void;
   onStatusChange: (status: SessionStatus) => void;
+  onDelete?: (session: SessionOverviewItem) => void;
 }) {
   const sessionStatus = session.status ?? "completed";
   const normalizedStatus: SessionStatus =
@@ -124,6 +129,17 @@ export function SessionCard({
                 <span>Editar</span>
               </Button>
             )}
+            {canDelete && onDelete && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => onDelete(session)}
+                className="h-8 gap-1.5 text-destructive hover:text-destructive"
+              >
+                <Trash2 className="size-3.5" />
+                <span>Excluir</span>
+              </Button>
+            )}
           </div>
         </div>
       </CardHeader>
@@ -174,9 +190,18 @@ export function SessionCard({
             <p className="text-xs font-medium tracking-wide text-muted-foreground">
               Assinatura
             </p>
-            <p className="line-clamp-3 break-all whitespace-pre-wrap rounded-lg border bg-muted/40 px-3 py-2 text-xs">
-              {session.signature}
-            </p>
+            {isSignatureImage(session.signature) ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={session.signature}
+                alt={`Assinatura da sessão ${session.sessionNumber}`}
+                className="h-24 w-full max-w-md rounded-lg border bg-white object-contain p-2"
+              />
+            ) : (
+              <p className="line-clamp-3 break-all whitespace-pre-wrap rounded-lg border bg-muted/40 px-3 py-2 text-xs">
+                {session.signature}
+              </p>
+            )}
           </div>
         )}
 

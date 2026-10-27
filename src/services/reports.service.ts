@@ -1,5 +1,6 @@
 import { appointmentsService } from "@/services/appointments.service";
 import { patientsService } from "@/services/patients.service";
+import { salesService } from "@/services/sales.service";
 import { sessionsService } from "@/services/sessions.service";
 import type { Appointment, AppointmentStatus } from "@/types";
 
@@ -12,10 +13,10 @@ export interface ManagerReport {
   appointmentCounts: Record<AppointmentStatus, number>;
   completedSessionCount: number;
   financial: {
-    paidConsultations: number | null;
-    paidAmount: number | null;
-    outstandingAmount: number | null;
-    appointmentsWithoutPaymentData: number;
+    salesCount: number;
+    totalValue: string;
+    totalDiscount: string;
+    revenue: string;
   };
 }
 
@@ -86,12 +87,13 @@ export const reportsService = {
     to: string,
     options?: { signal?: AbortSignal },
   ): Promise<ManagerReport> {
-    const [patientsPage, appointments] = await Promise.all([
+    const [patientsPage, appointments, financial] = await Promise.all([
       patientsService.list({ page: 1, limit: PATIENT_PAGE_SIZE }, options),
       appointmentsService.list(
         { from, to },
         options,
       ),
+      salesService.summary({ from, to }, options),
     ]);
     const appointmentCounts: Record<AppointmentStatus, number> = {
       scheduled: 0,
@@ -119,12 +121,7 @@ export const reportsService = {
       appointments,
       appointmentCounts,
       completedSessionCount,
-      financial: {
-        paidConsultations: null,
-        paidAmount: null,
-        outstandingAmount: null,
-        appointmentsWithoutPaymentData: appointments.length,
-      },
+      financial,
     };
   },
 };

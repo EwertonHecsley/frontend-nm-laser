@@ -8,10 +8,13 @@ export type Permission =
   | "patients:delete"
   | "appointments:read"
   | "appointments:write"
+  | "appointments:delete"
   | "sessions:read"
   | "sessions:write"
+  | "sessions:delete"
   | "catalog:manage"
   | "sales:write"
+  | "sales:delete"
   | "users:read"
   | "users:manage";
 
@@ -24,10 +27,13 @@ const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
     "patients:delete",
     "appointments:read",
     "appointments:write",
+    "appointments:delete",
     "sessions:read",
     "sessions:write",
+    "sessions:delete",
     "catalog:manage",
     "sales:write",
+    "sales:delete",
     "users:read",
     "users:manage",
   ],
@@ -37,6 +43,7 @@ const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
     "patients:write",
     "appointments:read",
     "appointments:write",
+    "appointments:delete",
     "sessions:read",
     "sales:write",
   ],
@@ -45,6 +52,7 @@ const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
     "patients:read",
     "appointments:read",
     "appointments:write",
+    "appointments:delete",
     "sessions:read",
     "sessions:write",
   ],

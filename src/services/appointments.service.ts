@@ -59,4 +59,8 @@ export const appointmentsService = {
       toUpdatePayload(input),
     );
   },
+
+  remove(id: string) {
+    return http.delete(`appointments/${encodeURIComponent(id)}`);
+  },
 };

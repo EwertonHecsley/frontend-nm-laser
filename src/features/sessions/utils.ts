@@ -60,6 +60,11 @@ export function sortSessionsByNumber(
   );
 }
 
+
+export function isSignatureImage(value: string): boolean {
+  return /^data:image\/(?:png|jpe?g|webp);base64,/i.test(value);
+}
+
 export function shortId(value: string | null): string {
   return value ? `${value.slice(0, 8)}…` : "—";
 }

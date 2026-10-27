@@ -79,7 +79,9 @@ export const sessionFormSchema = z
       .string()
       .trim()
       .max(2000, "As observações devem ter no máximo 2000 caracteres."),
-    signature: z.string(),
+    signature: z
+      .string()
+      .max(120_000, "A assinatura é muito grande."),
   })
   .superRefine(validatePackageSelection);
 
@@ -124,7 +126,9 @@ export const editSessionFormSchema = z
       .string()
       .trim()
       .max(2000, "As observações devem ter no máximo 2000 caracteres."),
-    signature: z.string(),
+    signature: z
+      .string()
+      .max(120_000, "A assinatura é muito grande."),
   })
   .superRefine(validatePackageSelection);
 

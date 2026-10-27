@@ -466,7 +466,7 @@ export function PatientsView({
               <strong className="font-medium text-foreground">
                 {patientToDelete?.fullName}
               </strong>{" "}
-              será removido permanentemente. Esta ação não pode ser desfeita.
+              será removido permanentemente. Pacientes com agendamentos, compras ou sessões vinculados não podem ser excluídos. Esta ação não pode ser desfeita.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

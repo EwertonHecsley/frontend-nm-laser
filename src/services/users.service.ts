@@ -44,4 +44,8 @@ export const usersService = {
       toUserPayload(input),
     );
   },
+
+  remove(id: string) {
+    return http.delete(`users/${encodeURIComponent(id)}`);
+  },
 };

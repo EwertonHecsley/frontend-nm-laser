@@ -11,10 +11,12 @@ import {
   RefreshCw,
 } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 
 import { PageHeader } from "@/components/layout/page-header";
+import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -92,15 +94,21 @@ function GroupStats({
 export function SessionGroupDetailView({
   groupId,
   canWrite,
+  canDelete = false,
   canCreateSale = false,
 }: {
   groupId: string;
   canWrite: boolean;
+  canDelete?: boolean;
   canCreateSale?: boolean;
 }) {
   const [editingSession, setEditingSession] =
     useState<SessionOverviewItem | null>(null);
+  const [sessionToDelete, setSessionToDelete] =
+    useState<SessionOverviewItem | null>(null);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const router = useRouter();
 
   const { data, error, isLoading, refetch } = useApiQuery(
     (signal) => sessionsService.getGroup(groupId, { signal }),
@@ -181,6 +189,27 @@ export function SessionGroupDetailView({
       toast.error(getErrorMessage(updateError), { id: toastId });
     } finally {
       setUpdatingId(null);
+    }
+  }
+
+  async function handleDelete() {
+    if (!sessionToDelete) return;
+
+    setIsDeleting(true);
+    try {
+      const wasLastSession = sessions.length <= 1;
+      await sessionsService.remove(sessionToDelete.id);
+      toast.success("Sessão excluída.");
+      setSessionToDelete(null);
+      if (wasLastSession) {
+        router.push("/sessions");
+      } else {
+        refetch();
+      }
+    } catch (deleteError) {
+      toast.error(getErrorMessage(deleteError));
+    } finally {
+      setIsDeleting(false);
     }
   }
 
@@ -348,8 +377,10 @@ export function SessionGroupDetailView({
                         : undefined
                     }
                     canWrite={canWrite}
+                    canDelete={canDelete}
                     isUpdating={updatingId === session.id}
                     onEdit={setEditingSession}
+                    onDelete={setSessionToDelete}
                     onStatusChange={(nextStatus) =>
                       handleStatusChange(session, nextStatus)
                     }
@@ -393,6 +424,26 @@ export function SessionGroupDetailView({
           setEditingSession(null);
           retry();
         }}
+      />
+
+      <ConfirmDeleteDialog
+        open={Boolean(sessionToDelete)}
+        onOpenChange={(open) => {
+          if (!open) setSessionToDelete(null);
+        }}
+        title="Excluir sessão?"
+        description={
+          <>
+            A sessão {sessionToDelete?.sessionNumber} de{" "}
+            <strong className="font-medium text-foreground">
+              {sessionToDelete?.patient.fullName}
+            </strong>{" "}
+            será removida permanentemente. Se ela estiver concluída, o saldo
+            do pacote será recalculado.
+          </>
+        }
+        isDeleting={isDeleting}
+        onConfirm={() => void handleDelete()}
       />
     </div>
   );

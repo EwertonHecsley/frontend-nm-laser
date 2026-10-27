@@ -10,6 +10,7 @@ import {
   Pencil,
   Plus,
   RefreshCw,
+  Trash2,
   X,
 } from "lucide-react";
 import Link from "next/link";
@@ -17,6 +18,7 @@ import { useMemo, useState } from "react";
 import { toast } from "sonner";
 
 import { PageHeader } from "@/components/layout/page-header";
+import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -244,6 +246,9 @@ export function AppointmentsView({
     useState<AppointmentProximity | null>(null);
   const [sort, setSort] = useState<AppointmentSort | null>(null);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
+  const [appointmentToDelete, setAppointmentToDelete] =
+    useState<Appointment | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const professionalId = professionalIdFilter || undefined;
 
@@ -412,6 +417,22 @@ export function AppointmentsView({
       professionalIdFilter ||
       proximityFilter,
   );
+
+  async function handleDelete() {
+    if (!appointmentToDelete) return;
+
+    setIsDeleting(true);
+    try {
+      await appointmentsService.remove(appointmentToDelete.id);
+      toast.success("Agendamento excluído.");
+      setAppointmentToDelete(null);
+      refetch();
+    } catch (deleteError) {
+      toast.error(getErrorMessage(deleteError));
+    } finally {
+      setIsDeleting(false);
+    }
+  }
 
   function clearFilters() {
     setFromDate("");
@@ -810,19 +831,32 @@ export function AppointmentsView({
                                   </Button>
                                 ))}
                               {canWrite && (
-                                <Button
-                                  type="button"
-                                  variant="ghost"
-                                  size="icon-sm"
-                                  asChild
-                                  aria-label={`Editar agendamento de ${formatDateTime(appointment.scheduledAt)}`}
-                                >
-                                  <Link
-                                    href={`/appointments/${appointment.id}/edit`}
+                                <>
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="icon-sm"
+                                    asChild
+                                    aria-label={`Editar agendamento de ${formatDateTime(appointment.scheduledAt)}`}
                                   >
-                                    <Pencil className="size-4" />
-                                  </Link>
-                                </Button>
+                                    <Link
+                                      href={`/appointments/${appointment.id}/edit`}
+                                    >
+                                      <Pencil className="size-4" />
+                                    </Link>
+                                  </Button>
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="icon-sm"
+                                    aria-label={`Excluir agendamento de ${formatDateTime(appointment.scheduledAt)}`}
+                                    onClick={() =>
+                                      setAppointmentToDelete(appointment)
+                                    }
+                                  >
+                                    <Trash2 className="size-4 text-destructive" />
+                                  </Button>
+                                </>
                               )}
                             </div>
                           </TableCell>
@@ -882,19 +916,32 @@ export function AppointmentsView({
                             </p>
                           </div>
                           {canWrite && (
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="icon-sm"
-                              asChild
-                              aria-label="Editar agendamento"
-                            >
-                              <Link
-                                href={`/appointments/${appointment.id}/edit`}
+                            <div className="flex items-center gap-1">
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon-sm"
+                                asChild
+                                aria-label="Editar agendamento"
                               >
-                                <Pencil className="size-4" />
-                              </Link>
-                            </Button>
+                                <Link
+                                  href={`/appointments/${appointment.id}/edit`}
+                                >
+                                  <Pencil className="size-4" />
+                                </Link>
+                              </Button>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon-sm"
+                                aria-label="Excluir agendamento"
+                                onClick={() =>
+                                  setAppointmentToDelete(appointment)
+                                }
+                              >
+                                <Trash2 className="size-4 text-destructive" />
+                              </Button>
+                            </div>
                           )}
                         </div>
                         <div className="flex flex-wrap items-center gap-2">
@@ -955,6 +1002,28 @@ export function AppointmentsView({
           )}
         </CardContent>
       </Card>
+      <ConfirmDeleteDialog
+        open={Boolean(appointmentToDelete)}
+        onOpenChange={(open) => {
+          if (!open) setAppointmentToDelete(null);
+        }}
+        title="Excluir agendamento?"
+        description={
+          <>
+            O agendamento de{" "}
+            <strong className="font-medium text-foreground">
+              {appointmentToDelete
+                ? formatDateTime(appointmentToDelete.scheduledAt)
+                : ""}
+            </strong>{" "}
+            será removido permanentemente. Agendamentos com sessão vinculada
+            não podem ser excluídos; nesse caso, altere o status para
+            cancelado.
+          </>
+        }
+        isDeleting={isDeleting}
+        onConfirm={() => void handleDelete()}
+      />
     </div>
   );
 }

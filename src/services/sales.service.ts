@@ -99,4 +99,8 @@ export const salesService = {
       toUpdatePayload(input),
     );
   },
+
+  remove(id: string) {
+    return http.delete(`sales/${encodeURIComponent(id)}`);
+  },
 };

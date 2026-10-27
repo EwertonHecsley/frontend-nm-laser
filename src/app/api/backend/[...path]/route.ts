@@ -40,26 +40,32 @@ const METHOD_PERMISSIONS: Record<
   appointments: {
     POST: "appointments:write",
     PATCH: "appointments:write",
+    DELETE: "appointments:delete",
   },
   sessions: {
     POST: "sessions:write",
     PATCH: "sessions:write",
+    DELETE: "sessions:delete",
   },
   areas: {
     POST: "catalog:manage",
     PATCH: "catalog:manage",
+    DELETE: "catalog:manage",
   },
   packages: {
     POST: "catalog:manage",
     PATCH: "catalog:manage",
+    DELETE: "catalog:manage",
   },
   sales: {
     POST: "sales:write",
     PATCH: "sales:write",
+    DELETE: "sales:delete",
   },
   users: {
     POST: "users:manage",
     PATCH: "users:manage",
+    DELETE: "users:manage",
   },
 };
 

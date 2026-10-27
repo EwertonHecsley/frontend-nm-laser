@@ -359,7 +359,7 @@ export function CitiesView({ canManage }: { canManage: boolean }) {
               <strong className="font-medium text-foreground">
                 {cityToDelete?.name}
               </strong>{" "}
-              será removida permanentemente. Esta ação não pode ser desfeita.
+              será removida permanentemente. Cidades com pacientes ou agendamentos vinculados não podem ser excluídas. Esta ação não pode ser desfeita.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

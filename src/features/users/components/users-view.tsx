@@ -6,12 +6,14 @@ import {
   Plus,
   RefreshCw,
   Search,
+  Trash2,
   UsersRound,
 } from "lucide-react";
 import Link from "next/link";
 import { useDeferredValue, useMemo, useState } from "react";
 
 import { PageHeader } from "@/components/layout/page-header";
+import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -36,11 +38,16 @@ import {
 import { useApiQuery, usePagination } from "@/hooks";
 import { getRoleLabel } from "@/lib/auth/role-labels";
 import { formatDate } from "@/lib/format/date";
+import { getErrorMessage } from "@/lib/http/errors";
 import { usersService } from "@/services";
+import type { ManagedUser } from "@/types";
+import { toast } from "sonner";
 
 export function UsersView() {
   const [search, setSearch] = useState("");
   const deferredSearch = useDeferredValue(search);
+  const [memberToDelete, setMemberToDelete] = useState<ManagedUser | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const { data, error, isLoading, refetch } = useApiQuery(
     (signal) => usersService.list({ signal }),
@@ -70,6 +77,22 @@ export function UsersView() {
     filteredUsers,
     { resetKey: deferredSearch },
   );
+
+  async function handleDelete() {
+    if (!memberToDelete) return;
+
+    setIsDeleting(true);
+    try {
+      await usersService.remove(memberToDelete.id);
+      toast.success(`Integrante "${memberToDelete.name}" excluído.`);
+      setMemberToDelete(null);
+      refetch();
+    } catch (deleteError) {
+      toast.error(getErrorMessage(deleteError));
+    } finally {
+      setIsDeleting(false);
+    }
+  }
 
   return (
     <div className="space-y-6">
@@ -192,7 +215,7 @@ export function UsersView() {
                           {formatDate(member.createdAt)}
                         </TableCell>
                         <TableCell>
-                          <div className="flex items-center justify-end">
+                          <div className="flex items-center justify-end gap-1">
                             <Button
                               type="button"
                               variant="ghost"
@@ -203,6 +226,15 @@ export function UsersView() {
                               <Link href={`/users/${member.id}/edit`}>
                                 <Pencil className="size-4" />
                               </Link>
+                            </Button>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon-sm"
+                              aria-label={`Excluir ${member.name}`}
+                              onClick={() => setMemberToDelete(member)}
+                            >
+                              <Trash2 className="size-4 text-destructive" />
                             </Button>
                           </div>
                         </TableCell>
@@ -220,6 +252,26 @@ export function UsersView() {
           )}
         </CardContent>
       </Card>
+
+      <ConfirmDeleteDialog
+        open={Boolean(memberToDelete)}
+        onOpenChange={(open) => {
+          if (!open) setMemberToDelete(null);
+        }}
+        title="Excluir integrante?"
+        description={
+          <>
+            O integrante{" "}
+            <strong className="font-medium text-foreground">
+              {memberToDelete?.name}
+            </strong>{" "}
+            será removido permanentemente. Integrantes com vendas,
+            agendamentos ou sessões vinculados não podem ser excluídos.
+          </>
+        }
+        isDeleting={isDeleting}
+        onConfirm={() => void handleDelete()}
+      />
     </div>
   );
 }

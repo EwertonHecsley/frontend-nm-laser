@@ -65,4 +65,8 @@ export const packagesService = {
       toUpdatePayload(input),
     );
   },
+
+  remove(id: string) {
+    return http.delete(`packages/${encodeURIComponent(id)}`);
+  },
 };

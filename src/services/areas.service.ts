@@ -30,4 +30,8 @@ export const areasService = {
       toAreaPayload(input),
     );
   },
+
+  remove(id: string) {
+    return http.delete(`areas/${encodeURIComponent(id)}`);
+  },
 };
