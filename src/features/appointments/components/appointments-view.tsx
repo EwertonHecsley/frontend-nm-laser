@@ -2,6 +2,9 @@
 
 import {
   AlertTriangle,
+  ArrowDown,
+  ArrowUp,
+  ArrowUpDown,
   CalendarDays,
   MessageCircle,
   Pencil,
@@ -47,17 +50,23 @@ import {
 import {
   APPOINTMENT_STATUS_BADGE_VARIANTS,
   APPOINTMENT_STATUS_OPTIONS,
+  getAppointmentProximity,
   getAppointmentStatusLabel,
   isAppointmentConfirmable,
+  type AppointmentProximity,
 } from "@/features/appointments/utils";
 import { useApiQuery, usePagination } from "@/hooks";
-import { AppointmentProximityBadge, AppointmentProximityFlag } from "@/features/appointments/components/appointment-proximity-flag";
+import {
+  AppointmentProximityFilter,
+  AppointmentProximityFlag,
+} from "@/features/appointments/components/appointment-proximity-flag";
 import {
   formatDateTime,
   toEndOfDayIso,
   toStartOfDayIso,
 } from "@/lib/format/date";
 import { getErrorMessage } from "@/lib/http/errors";
+import { cn } from "@/lib/utils";
 import { buildWhatsAppHref } from "@/lib/whatsapp";
 import {
   appointmentsService,
@@ -104,6 +113,65 @@ function getWhatsAppConfirmationHref(
   const message = `Olá, ${patient.fullName}! Tudo bem? Passando para confirmar seu agendamento de ${formatDateTime(appointment.scheduledAt)}${cityLabel}. Podemos confirmar?`;
 
   return buildWhatsAppHref(patient.whatsapp, message);
+}
+
+type SortKey =
+  | "scheduledAt"
+  | "createdAt"
+  | "patient"
+  | "city"
+  | "professional"
+  | "status";
+type SortDirection = "asc" | "desc";
+type AppointmentSort = { key: SortKey; direction: SortDirection };
+
+const COLLATOR = new Intl.Collator("pt-BR", { sensitivity: "base" });
+
+function SortableHead({
+  label,
+  sortKey,
+  sort,
+  onSort,
+  className,
+}: {
+  label: string;
+  sortKey: SortKey;
+  sort: AppointmentSort | null;
+  onSort: (key: SortKey) => void;
+  className?: string;
+}) {
+  const direction = sort?.key === sortKey ? sort.direction : null;
+  const isActive = direction !== null;
+  const Icon = !direction
+    ? ArrowUpDown
+    : direction === "asc"
+      ? ArrowUp
+      : ArrowDown;
+
+  return (
+    <TableHead
+      className={className}
+      aria-sort={
+        !direction
+          ? "none"
+          : direction === "asc"
+            ? "ascending"
+            : "descending"
+      }
+    >
+      <button
+        type="button"
+        onClick={() => onSort(sortKey)}
+        className={cn(
+          "-mx-1 inline-flex items-center gap-1 rounded-md px-1 py-1 transition-colors hover:text-foreground",
+          isActive ? "text-foreground" : "text-muted-foreground",
+        )}
+      >
+        {label}
+        <Icon className="size-3.5" aria-hidden="true" />
+      </button>
+    </TableHead>
+  );
 }
 
 function LoadingState() {
@@ -172,6 +240,9 @@ export function AppointmentsView({
   const [status, setStatus] = useState<AppointmentStatus | "all">("all");
   const [cityId, setCityId] = useState("");
   const [professionalIdFilter, setProfessionalIdFilter] = useState("");
+  const [proximityFilter, setProximityFilter] =
+    useState<AppointmentProximity | null>(null);
+  const [sort, setSort] = useState<AppointmentSort | null>(null);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
 
   const professionalId = professionalIdFilter || undefined;
@@ -247,18 +318,89 @@ export function AppointmentsView({
     [data],
   );
 
-  const filteredAppointments = useMemo(
-    () =>
-      status === "all"
-        ? appointments
-        : appointments.filter((appointment) => appointment.status === status),
-    [appointments, status],
-  );
+  const filteredAppointments = useMemo(() => {
+    const filtered = appointments.filter((appointment) => {
+      if (status !== "all" && appointment.status !== status) {
+        return false;
+      }
+
+      if (
+        proximityFilter &&
+        getAppointmentProximity(
+          appointment.scheduledAt,
+          appointment.status,
+        ) !== proximityFilter
+      ) {
+        return false;
+      }
+
+      return true;
+    });
+
+    if (!sort) {
+      return filtered;
+    }
+
+    return [...filtered].sort((a, b) => {
+      let comparison = 0;
+
+      switch (sort.key) {
+        case "scheduledAt":
+          comparison =
+            new Date(a.scheduledAt).getTime() -
+            new Date(b.scheduledAt).getTime();
+          break;
+        case "createdAt":
+          comparison =
+            new Date(a.createdAt).getTime() -
+            new Date(b.createdAt).getTime();
+          break;
+        case "patient":
+          comparison = COLLATOR.compare(
+            patientsById.get(a.patientId)?.fullName ?? "",
+            patientsById.get(b.patientId)?.fullName ?? "",
+          );
+          break;
+        case "city":
+          comparison = COLLATOR.compare(
+            cityNames.get(a.cityId) ?? "",
+            cityNames.get(b.cityId) ?? "",
+          );
+          break;
+        case "professional":
+          comparison = COLLATOR.compare(
+            a.professionalId
+              ? (professionalNames.get(a.professionalId) ?? "")
+              : "",
+            b.professionalId
+              ? (professionalNames.get(b.professionalId) ?? "")
+              : "",
+          );
+          break;
+        case "status":
+          comparison = COLLATOR.compare(
+            getAppointmentStatusLabel(a.status),
+            getAppointmentStatusLabel(b.status),
+          );
+          break;
+      }
+
+      return sort.direction === "asc" ? comparison : -comparison;
+    });
+  }, [
+    appointments,
+    status,
+    proximityFilter,
+    sort,
+    patientsById,
+    cityNames,
+    professionalNames,
+  ]);
 
   const { pageItems, page, totalItems, setPage } = usePagination(
     filteredAppointments,
     {
-      resetKey: `${fromDate}:${toDate}:${cityId}:${professionalId ?? ""}:${status}`,
+      resetKey: `${fromDate}:${toDate}:${cityId}:${professionalId ?? ""}:${status}:${proximityFilter ?? "all"}:${sort?.key ?? "none"}:${sort?.direction ?? ""}`,
     },
   );
 
@@ -267,7 +409,8 @@ export function AppointmentsView({
       toDate ||
       status !== "all" ||
       cityId ||
-      professionalIdFilter,
+      professionalIdFilter ||
+      proximityFilter,
   );
 
   function clearFilters() {
@@ -276,6 +419,24 @@ export function AppointmentsView({
     setStatus("all");
     setCityId("");
     setProfessionalIdFilter("");
+    setProximityFilter(null);
+  }
+
+  function handleSort(key: SortKey) {
+    setSort((current) => {
+      if (current?.key === key) {
+        return {
+          key,
+          direction: current.direction === "asc" ? "desc" : "asc",
+        };
+      }
+
+      return {
+        key,
+        direction:
+          key === "scheduledAt" || key === "createdAt" ? "desc" : "asc",
+      };
+    });
   }
 
   async function handleStatusChange(
@@ -442,9 +603,21 @@ export function AppointmentsView({
             </CardDescription>
             <div className="flex flex-wrap items-center gap-2 pt-1 text-xs text-muted-foreground">
               <span>Sinalização:</span>
-              <AppointmentProximityBadge proximity="normal" />
-              <AppointmentProximityBadge proximity="tomorrow" />
-              <AppointmentProximityBadge proximity="today" />
+              {(["normal", "tomorrow", "today"] as const).map((proximity) => (
+                <AppointmentProximityFilter
+                  key={proximity}
+                  proximity={proximity}
+                  active={proximityFilter === proximity}
+                  onClick={() =>
+                    setProximityFilter((current) =>
+                      current === proximity ? null : proximity,
+                    )
+                  }
+                />
+              ))}
+              <span className="text-muted-foreground/80">
+                Clique para filtrar
+              </span>
             </div>
           </div>
         </CardHeader>
@@ -507,13 +680,44 @@ export function AppointmentsView({
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Data e hora</TableHead>
-                      <TableHead>Paciente</TableHead>
-                      <TableHead>Cidade</TableHead>
-                      <TableHead className="hidden xl:table-cell">
-                        Profissional
-                      </TableHead>
-                      <TableHead className="w-[1%]">Status</TableHead>
+                      <SortableHead
+                        label="Criado em"
+                        sortKey="createdAt"
+                        sort={sort}
+                        onSort={handleSort}
+                      />
+                      <SortableHead
+                        label="Data do Agendamento"
+                        sortKey="scheduledAt"
+                        sort={sort}
+                        onSort={handleSort}
+                      />
+                      <SortableHead
+                        label="Paciente"
+                        sortKey="patient"
+                        sort={sort}
+                        onSort={handleSort}
+                      />
+                      <SortableHead
+                        label="Cidade"
+                        sortKey="city"
+                        sort={sort}
+                        onSort={handleSort}
+                      />
+                      <SortableHead
+                        label="Profissional"
+                        sortKey="professional"
+                        sort={sort}
+                        onSort={handleSort}
+                        className="hidden xl:table-cell"
+                      />
+                      <SortableHead
+                        label="Status"
+                        sortKey="status"
+                        sort={sort}
+                        onSort={handleSort}
+                        className="w-[1%]"
+                      />
                       <TableHead className="w-[1%] text-right">
                         Ações
                       </TableHead>
@@ -537,6 +741,9 @@ export function AppointmentsView({
 
                       return (
                         <TableRow key={appointment.id}>
+                          <TableCell className="text-muted-foreground">
+                            {formatDateTime(appointment.createdAt)}
+                          </TableCell>
                           <TableCell className="font-medium">
                             {formatDateTime(appointment.scheduledAt)}
                           </TableCell>
@@ -644,7 +851,12 @@ export function AppointmentsView({
                       <CardContent className="space-y-3">
                         <div className="flex items-start justify-between gap-3">
                           <div className="min-w-0 space-y-1">
+                            <p className="text-xs text-muted-foreground">
+                              Criado em:{" "}
+                              {formatDateTime(appointment.createdAt)}
+                            </p>
                             <p className="font-medium">
+                              Data do Agendamento:{" "}
                               {formatDateTime(appointment.scheduledAt)}
                             </p>
                             <div className="flex flex-wrap items-center gap-2">

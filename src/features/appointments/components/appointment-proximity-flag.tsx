@@ -54,3 +54,40 @@ export function AppointmentProximityFlag({
 
   return <AppointmentProximityBadge proximity={proximity} />;
 }
+
+export function AppointmentProximityFilter({
+  proximity,
+  active,
+  onClick,
+}: {
+  proximity: AppointmentProximity;
+  active: boolean;
+  onClick: () => void;
+}) {
+  const label = PROXIMITY_LABELS[proximity];
+
+  return (
+    <Badge
+      asChild
+      variant="outline"
+      className={cn(
+        "gap-1 font-medium transition",
+        PROXIMITY_CLASSES[proximity],
+        active
+          ? "ring-2 ring-foreground/40 ring-offset-1 ring-offset-background"
+          : "opacity-70 hover:opacity-100",
+      )}
+    >
+      <button
+        type="button"
+        onClick={onClick}
+        aria-pressed={active}
+        title={active ? `Remover filtro "${label}"` : `Filtrar por "${label}"`}
+        className="cursor-pointer"
+      >
+        <Flag className="size-3" aria-hidden="true" />
+        {label}
+      </button>
+    </Badge>
+  );
+}
