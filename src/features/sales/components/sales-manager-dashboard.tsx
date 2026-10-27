@@ -33,6 +33,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { PatientCombobox } from "@/features/appointments/components/patient-combobox";
 import { formatCurrency, SaleCard } from "@/features/sales/components/sale-card";
+import { SalesInsights } from "@/features/sales/components/sales-insights";
 import { PAYMENT_METHOD_OPTIONS } from "@/features/sales/utils";
 import { useApiQuery, usePagination } from "@/hooks";
 import { toEndOfDayIso, toStartOfDayIso } from "@/lib/format/date";
@@ -491,6 +492,11 @@ export function SalesManagerDashboard({ canWrite }: { canWrite: boolean }) {
               icon={BadgeDollarSign}
             />
           </div>
+
+          <SalesInsights
+            sales={sales ?? []}
+            description="Destaques gerais de clientes, pacotes e áreas com base nas vendas e filtros selecionados."
+          />
 
           <section aria-labelledby="sales-report-list" className="space-y-3">
             <div className="space-y-1">

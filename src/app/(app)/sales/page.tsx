@@ -32,6 +32,7 @@ export default async function SalesPage({ searchParams }: SalesPageProps) {
       initialPatientId={initialPatientId}
       canWrite={hasPermission(user.role, "sales:write")}
       role={user.role}
+      userId={user.id}
     />
   );
 }

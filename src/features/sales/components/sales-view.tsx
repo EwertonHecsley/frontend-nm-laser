@@ -233,10 +233,12 @@ export function SalesView({
   initialPatientId,
   canWrite,
   role,
+  userId,
 }: {
   initialPatientId: string;
   canWrite: boolean;
   role: Role;
+  userId: string;
 }) {
   const isManager = role === "gestora";
   const isVendor = role === "vendas";
@@ -273,7 +275,7 @@ export function SalesView({
       {isManager ? (
         <SalesManagerDashboard canWrite={canWrite} />
       ) : isVendor ? (
-        <SalesVendorDashboard canWrite={canWrite} />
+        <SalesVendorDashboard canWrite={canWrite} consultantId={userId} />
       ) : (
         <PatientSalesSection
           initialPatientId={initialPatientId}

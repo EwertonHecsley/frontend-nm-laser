@@ -38,6 +38,7 @@ import {
   formatCurrency,
   SaleCard,
 } from "@/features/sales/components/sale-card";
+import { SalesInsights } from "@/features/sales/components/sales-insights";
 import { PAYMENT_METHOD_OPTIONS } from "@/features/sales/utils";
 import { useApiQuery, usePagination } from "@/hooks";
 import { formatDate } from "@/lib/format/date";
@@ -325,7 +326,13 @@ function ClientCard({ client }: { client: VendorClientView }) {
   );
 }
 
-export function SalesVendorDashboard({ canWrite }: { canWrite: boolean }) {
+export function SalesVendorDashboard({
+  canWrite,
+  consultantId,
+}: {
+  canWrite: boolean;
+  consultantId: string;
+}) {
   const [periodPreset, setPeriodPreset] =
     useState<PeriodPreset>("thisMonth");
   const [cityId, setCityId] = useState("");
@@ -402,6 +409,13 @@ export function SalesVendorDashboard({ canWrite }: { canWrite: boolean }) {
         a.name.localeCompare(b.name, "pt-BR"),
       ),
     [cities],
+  );
+  const ownSales = useMemo(
+    () =>
+      (allSales ?? []).filter(
+        (sale) => sale.consultant?.id === consultantId,
+      ),
+    [allSales, consultantId],
   );
   const clients = useMemo(
     () => prioritizeClients(aggregateClients(allSales ?? [])),
@@ -638,6 +652,11 @@ export function SalesVendorDashboard({ canWrite }: { canWrite: boolean }) {
               icon={Sparkles}
             />
           </div>
+
+          <SalesInsights
+            sales={ownSales}
+            description="Destaques dos clientes que você atendeu, com base nas suas vendas filtradas."
+          />
 
           <section aria-labelledby="vendor-sales-clients" className="space-y-3">
             <div className="space-y-1">
