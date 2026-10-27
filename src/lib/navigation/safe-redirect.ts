@@ -9,9 +9,20 @@ export function getSafeRedirectPath(
     return fallback;
   }
 
-  if (value.startsWith("/login")) {
+  const internalOrigin = "https://safe-redirect.invalid";
+
+  try {
+    const redirectUrl = new URL(value, internalOrigin);
+
+    if (
+      redirectUrl.origin !== internalOrigin ||
+      redirectUrl.pathname.startsWith("/login")
+    ) {
+      return fallback;
+    }
+
+    return `${redirectUrl.pathname}${redirectUrl.search}${redirectUrl.hash}`;
+  } catch {
     return fallback;
   }
-
-  return value;
 }
