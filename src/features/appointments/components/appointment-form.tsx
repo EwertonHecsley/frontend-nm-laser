@@ -1,7 +1,13 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { AlertTriangle, ArrowLeft, Loader2, Save } from "lucide-react";
+import {
+  AlertTriangle,
+  ArrowLeft,
+  Loader2,
+  Save,
+  UserRound,
+} from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo } from "react";
@@ -48,6 +54,8 @@ interface AppointmentFormProps {
   mode: "create" | "edit";
   appointmentId?: string;
   initialPatientId?: string;
+  currentUserId: string;
+  currentUserEmail: string;
 }
 
 function getMutationError(error: unknown): string {
@@ -62,6 +70,8 @@ export function AppointmentForm({
   mode,
   appointmentId = "",
   initialPatientId = "",
+  currentUserId,
+  currentUserEmail,
 }: AppointmentFormProps) {
   const router = useRouter();
   const isEdit = mode === "edit";
@@ -76,6 +86,9 @@ export function AppointmentForm({
     `appointment:${appointmentId}`,
     { enabled: isEdit },
   );
+
+  const keepsProfessional =
+    isEdit && Boolean(appointment?.professionalId);
 
   const {
     data: cities,
@@ -104,7 +117,7 @@ export function AppointmentForm({
     defaultValues: {
       patientId: initialPatientId,
       cityId: "",
-      professionalId: "",
+      professionalId: currentUserId,
       scheduledAt: "",
       status: "scheduled",
     },
@@ -115,12 +128,12 @@ export function AppointmentForm({
       reset({
         patientId: appointment.patientId,
         cityId: appointment.cityId,
-        professionalId: appointment.professionalId ?? "",
+        professionalId: appointment.professionalId ?? currentUserId,
         scheduledAt: toDateTimeInputValue(appointment.scheduledAt),
         status: appointment.status,
       });
     }
-  }, [appointment, reset]);
+  }, [appointment, currentUserId, reset]);
 
   async function onSubmit(values: AppointmentFormValues) {
     const toastId = toast.loading(
@@ -307,29 +320,24 @@ export function AppointmentForm({
               <FieldError errors={[errors.status]} />
             </Field>
 
-            <Field
-              className="sm:col-span-2"
-              data-invalid={Boolean(errors.professionalId)}
-            >
-              <FieldLabel htmlFor="professionalId">
-                Profissional (opcional)
-              </FieldLabel>
-              <Input
+            <Field className="sm:col-span-2">
+              <FieldLabel htmlFor="professionalId">Profissional</FieldLabel>
+              <div
                 id="professionalId"
-                placeholder="UUID do profissional"
-                autoComplete="off"
-                className="h-11"
-                aria-invalid={Boolean(errors.professionalId)}
-                {...register("professionalId")}
-              />
-              {errors.professionalId ? (
-                <FieldError errors={[errors.professionalId]} />
-              ) : (
-                <FieldDescription>
-                  Informe o UUID de um integrante cadastrado em Equipe ou deixe
-                  em branco.
-                </FieldDescription>
-              )}
+                className="flex h-11 items-center gap-2 rounded-md border bg-muted/40 px-3 text-sm text-muted-foreground"
+              >
+                <UserRound className="size-4 shrink-0" aria-hidden="true" />
+                <span className="truncate">
+                  {keepsProfessional
+                    ? "Profissional atual do agendamento"
+                    : currentUserEmail || "Usuário logado"}
+                </span>
+              </div>
+              <FieldDescription>
+                {keepsProfessional
+                  ? "O profissional responsável é mantido ao editar o agendamento."
+                  : "Preenchido automaticamente com o usuário logado."}
+              </FieldDescription>
             </Field>
           </FieldGroup>
 

@@ -54,7 +54,12 @@ export default async function NewAppointmentPage({
           </Button>
         }
       />
-      <AppointmentForm mode="create" initialPatientId={initialPatientId} />
+      <AppointmentForm
+        mode="create"
+        initialPatientId={initialPatientId}
+        currentUserId={user.id}
+        currentUserEmail={user.email}
+      />
     </div>
   );
 }

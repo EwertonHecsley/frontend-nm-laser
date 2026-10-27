@@ -53,7 +53,12 @@ export default async function EditAppointmentPage({
           </Button>
         }
       />
-      <AppointmentForm mode="edit" appointmentId={id} />
+      <AppointmentForm
+        mode="edit"
+        appointmentId={id}
+        currentUserId={user.id}
+        currentUserEmail={user.email}
+      />
     </div>
   );
 }

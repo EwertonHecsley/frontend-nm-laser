@@ -61,11 +61,13 @@ function PatientActions({
   patient,
   canWrite,
   canDelete,
+  canViewHistory,
   onDelete,
 }: {
   patient: Patient;
   canWrite: boolean;
   canDelete: boolean;
+  canViewHistory: boolean;
   onDelete: (patient: Patient) => void;
 }) {
   return (
@@ -75,9 +77,19 @@ function PatientActions({
         variant="ghost"
         size="icon-sm"
         asChild
-        aria-label={`Ver histórico de sessões de ${patient.fullName}`}
+        aria-label={
+          canViewHistory
+            ? `Ver histórico completo de ${patient.fullName}`
+            : `Ver histórico de sessões de ${patient.fullName}`
+        }
       >
-        <Link href={`/sessions?patientId=${patient.id}`}>
+        <Link
+          href={
+            canViewHistory
+              ? `/patients/${patient.id}/history`
+              : `/sessions?patientId=${patient.id}`
+          }
+        >
           <ClipboardList className="size-4" />
         </Link>
       </Button>
@@ -110,6 +122,60 @@ function PatientActions({
   );
 }
 
+function PatientIdentity({
+  patient,
+  cityName,
+  canViewHistory,
+  showCity = false,
+}: {
+  patient: Patient;
+  cityName: string | null;
+  canViewHistory: boolean;
+  showCity?: boolean;
+}) {
+  const details = (
+    <div className="min-w-0 space-y-0.5">
+      <p className="truncate font-medium">{patient.fullName}</p>
+      <p className="text-xs text-muted-foreground">
+        CPF {formatCpf(patient.cpf)}
+      </p>
+      {showCity && (
+        <p className="text-xs text-muted-foreground">
+          {cityName ?? "Cidade não encontrada"}
+        </p>
+      )}
+    </div>
+  );
+
+  return (
+    <div
+      className={
+        showCity
+          ? "flex min-w-0 items-start gap-3"
+          : "flex items-center gap-2"
+      }
+    >
+      <span
+        className={`grid ${
+          showCity ? "size-9" : "size-8"
+        } shrink-0 place-items-center rounded-md bg-secondary text-secondary-foreground`}
+      >
+        <UserRound className="size-4" aria-hidden="true" />
+      </span>
+      {canViewHistory ? (
+        <Link
+          href={`/patients/${patient.id}/history`}
+          className="min-w-0 cursor-pointer rounded-md transition-colors hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        >
+          {details}
+        </Link>
+      ) : (
+        details
+      )}
+    </div>
+  );
+}
+
 function LoadingState() {
   return (
     <div className="space-y-3">
@@ -123,9 +189,11 @@ function LoadingState() {
 export function PatientsView({
   canWrite,
   canDelete,
+  canViewHistory,
 }: {
   canWrite: boolean;
   canDelete: boolean;
+  canViewHistory: boolean;
 }) {
   const [search, setSearch] = useState("");
   const debouncedSearch = useDebouncedValue(search, 350);
@@ -317,22 +385,11 @@ export function PatientsView({
                     {patients.map((patient) => (
                       <TableRow key={patient.id}>
                         <TableCell>
-                          <div className="flex items-center gap-2">
-                            <span className="grid size-8 shrink-0 place-items-center rounded-md bg-secondary text-secondary-foreground">
-                              <UserRound
-                                className="size-4"
-                                aria-hidden="true"
-                              />
-                            </span>
-                            <div className="min-w-0">
-                              <p className="truncate font-medium">
-                                {patient.fullName}
-                              </p>
-                              <p className="text-xs text-muted-foreground">
-                                CPF {formatCpf(patient.cpf)}
-                              </p>
-                            </div>
-                          </div>
+                          <PatientIdentity
+                            patient={patient}
+                            cityName={cityNames.get(patient.cityId) ?? null}
+                            canViewHistory={canViewHistory}
+                          />
                         </TableCell>
                         <TableCell>
                           {cityNames.get(patient.cityId) ?? "—"}
@@ -348,6 +405,7 @@ export function PatientsView({
                             patient={patient}
                             canWrite={canWrite}
                             canDelete={canDelete}
+                            canViewHistory={canViewHistory}
                             onDelete={setPatientToDelete}
                           />
                         </TableCell>
@@ -361,26 +419,17 @@ export function PatientsView({
                 {patients.map((patient) => (
                   <Card key={patient.id} size="sm">
                     <CardContent className="flex items-start justify-between gap-3">
-                      <div className="flex min-w-0 items-start gap-3">
-                        <span className="grid size-9 shrink-0 place-items-center rounded-md bg-secondary text-secondary-foreground">
-                          <UserRound className="size-4" aria-hidden="true" />
-                        </span>
-                        <div className="min-w-0 space-y-1">
-                          <p className="truncate font-medium">
-                            {patient.fullName}
-                          </p>
-                          <p className="text-xs text-muted-foreground">
-                            CPF {formatCpf(patient.cpf)}
-                          </p>
-                          <p className="text-xs text-muted-foreground">
-                            {cityNames.get(patient.cityId) ?? "Cidade não encontrada"}
-                          </p>
-                        </div>
-                      </div>
+                      <PatientIdentity
+                        patient={patient}
+                        cityName={cityNames.get(patient.cityId) ?? null}
+                        canViewHistory={canViewHistory}
+                        showCity
+                      />
                       <PatientActions
                         patient={patient}
                         canWrite={canWrite}
                         canDelete={canDelete}
+                        canViewHistory={canViewHistory}
                         onDelete={setPatientToDelete}
                       />
                     </CardContent>

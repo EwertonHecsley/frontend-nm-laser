@@ -15,6 +15,10 @@ const ROUTE_ACCESS_RULES: readonly RouteAccessRule[] = [
   { pattern: /^\/cities\/[^/]+\/edit\/?$/, roles: ["gestora"] },
   { pattern: /^\/patients\/new\/?$/, roles: ["gestora", "vendas"] },
   {
+    pattern: /^\/patients\/[^/]+\/history\/?$/,
+    roles: ["gestora", "vendas"],
+  },
+  {
     pattern: /^\/patients\/[^/]+\/edit\/?$/,
     roles: ["gestora", "vendas"],
   },

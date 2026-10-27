@@ -25,7 +25,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Field, FieldError, FieldLabel } from "@/components/ui/field";
+import { Field, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Pagination } from "@/components/ui/pagination";
 import {
@@ -49,9 +49,8 @@ import {
   APPOINTMENT_STATUS_OPTIONS,
   getAppointmentStatusLabel,
   isAppointmentConfirmable,
-  isUuid,
 } from "@/features/appointments/utils";
-import { useApiQuery, useDebouncedValue, usePagination } from "@/hooks";
+import { useApiQuery, usePagination } from "@/hooks";
 import { AppointmentProximityBadge, AppointmentProximityFlag } from "@/features/appointments/components/appointment-proximity-flag";
 import {
   formatDateTime,
@@ -60,10 +59,16 @@ import {
 } from "@/lib/format/date";
 import { getErrorMessage } from "@/lib/http/errors";
 import { buildWhatsAppHref } from "@/lib/whatsapp";
-import { appointmentsService, citiesService, patientsService } from "@/services";
+import {
+  appointmentsService,
+  citiesService,
+  patientsService,
+  usersService,
+} from "@/services";
 import type {
   Appointment,
   AppointmentStatus,
+  AuthUser,
   Patient,
 } from "@/types";
 
@@ -154,24 +159,22 @@ function StatusControl({
   );
 }
 
-export function AppointmentsView({ canWrite }: { canWrite: boolean }) {
+export function AppointmentsView({
+  canWrite,
+  currentUser,
+}: {
+  canWrite: boolean;
+  currentUser: AuthUser;
+}) {
+  const isManager = currentUser.role === "gestora";
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
   const [status, setStatus] = useState<AppointmentStatus | "all">("all");
   const [cityId, setCityId] = useState("");
-  const [professionalInput, setProfessionalInput] = useState("");
+  const [professionalIdFilter, setProfessionalIdFilter] = useState("");
   const [updatingId, setUpdatingId] = useState<string | null>(null);
 
-  const debouncedProfessional = useDebouncedValue(
-    professionalInput,
-    400,
-  ).trim();
-  const hasInvalidProfessional =
-    debouncedProfessional !== "" && !isUuid(debouncedProfessional);
-  const professionalId =
-    debouncedProfessional && !hasInvalidProfessional
-      ? debouncedProfessional
-      : undefined;
+  const professionalId = professionalIdFilter || undefined;
 
   const { data, error, isLoading, refetch } = useApiQuery(
     (signal) =>
@@ -197,10 +200,37 @@ export function AppointmentsView({ canWrite }: { canWrite: boolean }) {
     "appointments-patients",
   );
 
+  const { data: users } = useApiQuery(
+    (signal) => usersService.list({ signal }),
+    "appointments-users",
+    { enabled: isManager },
+  );
+
   const cityNames = useMemo(
     () => new Map((cities ?? []).map((city) => [city.id, city.name])),
     [cities],
   );
+
+  const professionals = useMemo(
+    () =>
+      [...(users ?? [])]
+        .map((user) => ({ id: user.id, name: user.name }))
+        .sort((a, b) => a.name.localeCompare(b.name, "pt-BR")),
+    [users],
+  );
+
+  const professionalNames = useMemo(() => {
+    const names = new Map(
+      professionals.map((professional) => [
+        professional.id,
+        professional.name,
+      ]),
+    );
+
+    names.set(currentUser.id, "Você");
+
+    return names;
+  }, [professionals, currentUser.id]);
 
   const patientsById = useMemo(
     () => new Map((patients ?? []).map((patient) => [patient.id, patient])),
@@ -233,7 +263,11 @@ export function AppointmentsView({ canWrite }: { canWrite: boolean }) {
   );
 
   const hasFilters = Boolean(
-    fromDate || toDate || status !== "all" || cityId || professionalInput,
+    fromDate ||
+      toDate ||
+      status !== "all" ||
+      cityId ||
+      professionalIdFilter,
   );
 
   function clearFilters() {
@@ -241,7 +275,7 @@ export function AppointmentsView({ canWrite }: { canWrite: boolean }) {
     setToDate("");
     setStatus("all");
     setCityId("");
-    setProfessionalInput("");
+    setProfessionalIdFilter("");
   }
 
   async function handleStatusChange(
@@ -353,23 +387,29 @@ export function AppointmentsView({ canWrite }: { canWrite: boolean }) {
             </Select>
           </Field>
 
-          <Field data-invalid={hasInvalidProfessional}>
-            <FieldLabel htmlFor="filter-professional">
-              Profissional (UUID)
-            </FieldLabel>
-            <Input
-              id="filter-professional"
-              value={professionalInput}
-              onChange={(event) => setProfessionalInput(event.target.value)}
-              placeholder="UUID do profissional"
-              autoComplete="off"
-              className="h-10"
-              aria-invalid={hasInvalidProfessional}
-            />
-            {hasInvalidProfessional && (
-              <FieldError>Informe um UUID válido ou deixe em branco.</FieldError>
-            )}
-          </Field>
+          {isManager && (
+            <Field>
+              <FieldLabel htmlFor="filter-professional">Profissional</FieldLabel>
+              <Select
+                value={professionalIdFilter || "all"}
+                onValueChange={(value) =>
+                  setProfessionalIdFilter(value === "all" ? "" : value)
+                }
+              >
+                <SelectTrigger id="filter-professional" className="h-10 w-full">
+                  <SelectValue placeholder="Todos os profissionais" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos os profissionais</SelectItem>
+                  {professionals.map((professional) => (
+                    <SelectItem key={professional.id} value={professional.id}>
+                      {professional.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </Field>
+          )}
         </CardContent>
         {hasFilters && (
           <CardFooter className="justify-end">
@@ -512,9 +552,12 @@ export function AppointmentsView({ canWrite }: { canWrite: boolean }) {
                             </div>
                           </TableCell>
                           <TableCell>{cityName}</TableCell>
-                          <TableCell className="hidden font-mono text-xs text-muted-foreground xl:table-cell">
+                          <TableCell className="hidden text-muted-foreground xl:table-cell">
                             {appointment.professionalId
-                              ? `${appointment.professionalId.slice(0, 8)}…`
+                              ? (professionalNames.get(
+                                  appointment.professionalId,
+                                ) ??
+                                `${appointment.professionalId.slice(0, 8)}…`)
                               : "—"}
                           </TableCell>
                           <TableCell>
@@ -616,6 +659,14 @@ export function AppointmentsView({ canWrite }: { canWrite: boolean }) {
                             </div>
                             <p className="text-xs text-muted-foreground">
                               {cityName}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              Profissional:{" "}
+                              {appointment.professionalId
+                                ? (professionalNames.get(
+                                    appointment.professionalId,
+                                  ) ?? "—")
+                                : "—"}
                             </p>
                           </div>
                           {canWrite && (

@@ -19,6 +19,7 @@ export default async function AppointmentsPage() {
   return (
     <AppointmentsView
       canWrite={hasPermission(user.role, "appointments:write")}
+      currentUser={user}
     />
   );
 }
