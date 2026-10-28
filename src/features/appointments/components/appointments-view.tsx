@@ -57,6 +57,12 @@ import {
   isAppointmentConfirmable,
   type AppointmentProximity,
 } from "@/features/appointments/utils";
+import {
+  canUseAppointmentWhatsApp,
+  getAppointmentWhatsAppConfirmationHref,
+  shouldShowAppointmentWhatsApp,
+  type AppointmentWhatsAppPatient,
+} from "@/features/appointments/whatsapp";
 import { useApiQuery, usePagination } from "@/hooks";
 import {
   AppointmentProximityFilter,
@@ -69,7 +75,7 @@ import {
 } from "@/lib/format/date";
 import { getErrorMessage } from "@/lib/http/errors";
 import { cn } from "@/lib/utils";
-import { buildWhatsAppHref } from "@/lib/whatsapp";
+import { isValidWhatsAppNumber } from "@/lib/whatsapp";
 import {
   appointmentsService,
   citiesService,
@@ -101,20 +107,34 @@ async function listAllPatients(signal: AbortSignal): Promise<Patient[]> {
   return patients;
 }
 
-function getWhatsAppConfirmationHref(
-  appointment: Appointment,
-  patient: Patient | undefined,
-  cityName: string,
-): string | null {
-  if (!patient?.whatsapp || !isAppointmentConfirmable(appointment.status)) {
-    return null;
-  }
+interface AppointmentWhatsAppLookup {
+  contact: AppointmentWhatsAppPatient | null;
+  failed: boolean;
+}
 
-  const cityLabel =
-    cityName && cityName !== "—" ? ` em ${cityName}` : "";
-  const message = `Olá, ${patient.fullName}! Tudo bem? Passando para confirmar seu agendamento de ${formatDateTime(appointment.scheduledAt)}${cityLabel}. Podemos confirmar?`;
+async function loadAppointmentWhatsAppContacts(
+  patientIds: string[],
+  signal: AbortSignal,
+): Promise<Map<string, AppointmentWhatsAppLookup>> {
+  const results = await Promise.allSettled(
+    patientIds.map(async (patientId) => {
+      const patient = await patientsService.getById(patientId, { signal });
 
-  return buildWhatsAppHref(patient.whatsapp, message);
+      return {
+        fullName: patient.fullName,
+        whatsapp: patient.whatsapp,
+      };
+    }),
+  );
+
+  return new Map(
+    results.map((result, index) => [
+      patientIds[index],
+      result.status === "fulfilled"
+        ? { contact: result.value, failed: false }
+        : { contact: null, failed: true },
+    ]),
+  );
 }
 
 type SortKey =
@@ -237,6 +257,7 @@ export function AppointmentsView({
   currentUser: AuthUser;
 }) {
   const isManager = currentUser.role === "gestora";
+  const canContactViaWhatsApp = canUseAppointmentWhatsApp(currentUser.role);
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
   const [status, setStatus] = useState<AppointmentStatus | "all">("all");
@@ -271,7 +292,7 @@ export function AppointmentsView({
     "cities",
   );
 
-  const { data: patients } = useApiQuery(
+  const { data: patients, isLoading: isLoadingPatients } = useApiQuery(
     (signal) => listAllPatients(signal),
     "appointments-patients",
   );
@@ -407,6 +428,44 @@ export function AppointmentsView({
     {
       resetKey: `${fromDate}:${toDate}:${cityId}:${professionalId ?? ""}:${status}:${proximityFilter ?? "all"}:${sort?.key ?? "none"}:${sort?.direction ?? ""}`,
     },
+  );
+
+  const whatsappLookupPatientIds = useMemo(() => {
+    if (!canContactViaWhatsApp || isLoadingPatients) {
+      return [];
+    }
+
+    return [
+      ...new Set(
+        pageItems
+          .filter((appointment) =>
+            isAppointmentConfirmable(appointment.status),
+          )
+          .map((appointment) => appointment.patientId),
+      ),
+    ]
+      .filter(
+        (patientId) =>
+          !isValidWhatsAppNumber(patientsById.get(patientId)?.whatsapp),
+      )
+      .sort();
+  }, [canContactViaWhatsApp, isLoadingPatients, pageItems, patientsById]);
+
+  const {
+    data: whatsappLookups,
+    isLoading: isLoadingWhatsAppLookups,
+  } = useApiQuery(
+    (signal) => loadAppointmentWhatsAppContacts(whatsappLookupPatientIds, signal),
+    `appointments-whatsapp:${whatsappLookupPatientIds.join(",")}`,
+    {
+      enabled:
+        canContactViaWhatsApp && whatsappLookupPatientIds.length > 0,
+    },
+  );
+
+  const whatsappLookupPatientIdSet = useMemo(
+    () => new Set(whatsappLookupPatientIds),
+    [whatsappLookupPatientIds],
   );
 
   const hasFilters = Boolean(
@@ -749,16 +808,39 @@ export function AppointmentsView({
                       const patient = patientsById.get(
                         appointment.patientId,
                       );
+                      const whatsappLookup = whatsappLookups?.get(
+                        appointment.patientId,
+                      );
+                      const whatsappPatient =
+                        whatsappLookup?.contact ?? patient;
                       const cityName =
                         cityNames.get(appointment.cityId) ?? "—";
-                      const whatsappHref = getWhatsAppConfirmationHref(
-                        appointment,
-                        patient,
-                        cityName,
-                      );
+                      const whatsappHref =
+                        getAppointmentWhatsAppConfirmationHref(
+                          currentUser.role,
+                          whatsappPatient,
+                          formatDateTime(appointment.scheduledAt),
+                          cityName,
+                        );
                       const isConfirmable = isAppointmentConfirmable(
                         appointment.status,
                       );
+                      const showWhatsApp = shouldShowAppointmentWhatsApp(
+                        currentUser.role,
+                        isConfirmable,
+                      );
+                      const isLookingUpWhatsApp =
+                        !isValidWhatsAppNumber(patient?.whatsapp) &&
+                        (isLoadingPatients ||
+                          (isLoadingWhatsAppLookups &&
+                            whatsappLookupPatientIdSet.has(
+                              appointment.patientId,
+                            )));
+                      const whatsappUnavailableLabel = isLookingUpWhatsApp
+                        ? "Carregando WhatsApp"
+                        : whatsappLookup?.failed
+                          ? "Falha ao carregar WhatsApp"
+                          : "WhatsApp indisponível";
 
                       return (
                         <TableRow key={appointment.id}>
@@ -800,7 +882,7 @@ export function AppointmentsView({
                           </TableCell>
                           <TableCell className="text-right">
                             <div className="flex items-center justify-end gap-1">
-                              {isConfirmable &&
+                              {showWhatsApp &&
                                 (whatsappHref ? (
                                   <Button
                                     type="button"
@@ -812,7 +894,7 @@ export function AppointmentsView({
                                     <a
                                       href={whatsappHref}
                                       target="_blank"
-                                      rel="noreferrer"
+                                      rel="noopener noreferrer"
                                       aria-label={`Confirmar agendamento de ${patient?.fullName ?? "paciente"} via WhatsApp`}
                                     >
                                       <MessageCircle className="size-4 text-emerald-600" />
@@ -824,12 +906,18 @@ export function AppointmentsView({
                                     variant="ghost"
                                     size="icon-sm"
                                     disabled
-                                    title="Paciente sem WhatsApp cadastrado"
-                                    aria-label="Paciente sem WhatsApp cadastrado"
+                                    title={whatsappUnavailableLabel}
+                                    aria-label={whatsappUnavailableLabel}
                                   >
                                     <MessageCircle className="size-4" />
                                   </Button>
                                 ))}
+                              {showWhatsApp &&
+                                !whatsappHref && (
+                                  <span className="text-xs text-muted-foreground">
+                                    {whatsappUnavailableLabel}
+                                  </span>
+                                )}
                               {canWrite && (
                                 <>
                                   <Button
@@ -870,15 +958,36 @@ export function AppointmentsView({
               <div className="space-y-3 lg:hidden">
                 {pageItems.map((appointment) => {
                   const patient = patientsById.get(appointment.patientId);
-                  const cityName = cityNames.get(appointment.cityId) ?? "—";
-                  const whatsappHref = getWhatsAppConfirmationHref(
-                    appointment,
-                    patient,
-                    cityName,
+                  const whatsappLookup = whatsappLookups?.get(
+                    appointment.patientId,
                   );
+                  const whatsappPatient =
+                    whatsappLookup?.contact ?? patient;
+                  const cityName = cityNames.get(appointment.cityId) ?? "—";
+                  const whatsappHref =
+                    getAppointmentWhatsAppConfirmationHref(
+                      currentUser.role,
+                      whatsappPatient,
+                      formatDateTime(appointment.scheduledAt),
+                      cityName,
+                    );
                   const isConfirmable = isAppointmentConfirmable(
                     appointment.status,
                   );
+                  const showWhatsApp = shouldShowAppointmentWhatsApp(
+                    currentUser.role,
+                    isConfirmable,
+                  );
+                  const isLookingUpWhatsApp =
+                    !isValidWhatsAppNumber(patient?.whatsapp) &&
+                    (isLoadingPatients ||
+                      (isLoadingWhatsAppLookups &&
+                        whatsappLookupPatientIdSet.has(appointment.patientId)));
+                  const whatsappUnavailableLabel = isLookingUpWhatsApp
+                    ? "Carregando WhatsApp"
+                    : whatsappLookup?.failed
+                      ? "Falha ao carregar WhatsApp"
+                      : "WhatsApp indisponível";
 
                   return (
                     <Card key={appointment.id} size="sm">
@@ -955,7 +1064,7 @@ export function AppointmentsView({
                               }
                             />
                           </div>
-                          {isConfirmable &&
+                          {showWhatsApp &&
                             (whatsappHref ? (
                               <Button
                                 type="button"
@@ -966,7 +1075,8 @@ export function AppointmentsView({
                                 <a
                                   href={whatsappHref}
                                   target="_blank"
-                                  rel="noreferrer"
+                                  rel="noopener noreferrer"
+                                  aria-label={`Confirmar agendamento de ${patient?.fullName ?? "paciente"} via WhatsApp`}
                                 >
                                   <MessageCircle className="size-4" />
                                   Confirmar no WhatsApp
@@ -978,10 +1088,11 @@ export function AppointmentsView({
                                 size="sm"
                                 variant="outline"
                                 disabled
-                                title="Paciente sem WhatsApp cadastrado"
+                                title={whatsappUnavailableLabel}
+                                aria-label={whatsappUnavailableLabel}
                               >
                                 <MessageCircle className="size-4" />
-                                Sem WhatsApp
+                                {whatsappUnavailableLabel}
                               </Button>
                             ))}
                         </div>

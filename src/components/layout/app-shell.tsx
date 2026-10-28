@@ -71,7 +71,12 @@ const NAV_ITEMS: readonly NavItem[] = [
   { label: "Pacientes", href: "/patients", icon: Users },
   { label: "Agendamentos", href: "/appointments", icon: CalendarDays },
   { label: "Sessões", href: "/sessions", icon: ClipboardList },
-  { label: "Vendas", href: "/sales", icon: BadgeDollarSign },
+  {
+    label: "Vendas",
+    href: "/sales",
+    icon: BadgeDollarSign,
+    permission: "sales:write",
+  },
   {
     label: "Equipe",
     href: "/users",
@@ -479,9 +484,13 @@ export function AppShell({
     }
 
     setIsLoggingOut(true);
-    await logout();
-    router.replace("/login");
-    router.refresh();
+
+    try {
+      await logout();
+    } finally {
+      router.replace("/login");
+      router.refresh();
+    }
   }
 
   return (

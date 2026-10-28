@@ -2,6 +2,7 @@ import { notFound, redirect } from "next/navigation";
 
 import { PatientHistoryView } from "@/features/patients/components/patient-history-view";
 import { FORBIDDEN_PATH, LOGIN_PATH } from "@/lib/auth/constants";
+import { hasPermission } from "@/lib/auth/permissions";
 import { getServerSession } from "@/lib/auth/session";
 
 export const metadata = {
@@ -21,7 +22,7 @@ export default async function PatientHistoryPage({
     redirect(LOGIN_PATH);
   }
 
-  if (user.role !== "gestora" && user.role !== "vendas") {
+  if (!hasPermission(user.role, "patients:read")) {
     redirect(FORBIDDEN_PATH);
   }
 

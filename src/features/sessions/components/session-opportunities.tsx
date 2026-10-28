@@ -4,6 +4,7 @@ import {
   AlertTriangle,
   Boxes,
   CalendarPlus,
+  ClipboardList,
   Clock,
   MessageCircle,
   RefreshCw,
@@ -93,9 +94,11 @@ function getOpportunityMessage(item: SaleOpportunity): string {
 function OpportunityCard({
   item,
   canSchedule,
+  canWrite,
 }: {
   item: SaleOpportunity;
   canSchedule: boolean;
+  canWrite: boolean;
 }) {
   const whatsappHref = buildWhatsAppHref(
     item.patient.whatsapp,
@@ -104,6 +107,9 @@ function OpportunityCard({
   const scheduleHref = `/appointments/new?patientId=${encodeURIComponent(
     item.patient.id,
   )}`;
+  const registerSessionHref = `/sessions/new?patientId=${encodeURIComponent(
+    item.patient.id,
+  )}&saleId=${encodeURIComponent(item.saleId)}`;
 
   return (
     <Card size="sm">
@@ -163,6 +169,15 @@ function OpportunityCard({
         )}
 
         <div className="flex flex-wrap justify-end gap-2">
+          {canWrite && (
+            <Button asChild size="sm" className="gap-1.5">
+              <Link href={registerSessionHref}>
+                <ClipboardList className="size-4" />
+                Registrar sessão
+              </Link>
+            </Button>
+          )}
+
           {whatsappHref ? (
             <Button asChild size="sm" className="gap-1.5">
               <a href={whatsappHref} target="_blank" rel="noreferrer">
@@ -211,9 +226,11 @@ function OpportunitiesSkeleton() {
 export function SessionOpportunities({
   refreshKey = 0,
   canSchedule = false,
+  canWrite = false,
 }: {
   refreshKey?: number;
   canSchedule?: boolean;
+  canWrite?: boolean;
 }) {
   const [filter, setFilter] = useState<OpportunityFilter>("all");
 
@@ -247,11 +264,11 @@ export function SessionOpportunities({
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div className="space-y-1">
           <h2 id="session-opportunities" className="text-lg font-semibold">
-            Clientes para acompanhar
+            Vendas com sessões contratadas
           </h2>
           <p className="text-sm text-muted-foreground">
-            Pacotes vendidos que ainda possuem sessões a realizar, com foco em
-            quem aguarda a primeira sessão.
+            Pacotes vendidos pelas consultoras que ainda possuem sessões a
+            realizar. Registre a sessão diretamente pela venda correspondente.
           </p>
         </div>
         {stats && (
@@ -368,6 +385,7 @@ export function SessionOpportunities({
                   key={item.saleId}
                   item={item}
                   canSchedule={canSchedule}
+                  canWrite={canWrite}
                 />
               ))}
               <Pagination

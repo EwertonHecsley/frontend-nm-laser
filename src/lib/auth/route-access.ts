@@ -13,22 +13,29 @@ const ROUTE_ACCESS_RULES: readonly RouteAccessRule[] = [
   { pattern: /^\/users(\/.*)?$/, roles: ["gestora"] },
   { pattern: /^\/cities\/new\/?$/, roles: ["gestora"] },
   { pattern: /^\/cities\/[^/]+\/edit\/?$/, roles: ["gestora"] },
-  { pattern: /^\/patients\/new\/?$/, roles: ["gestora", "vendas"] },
+  {
+    pattern: /^\/patients\/?$/,
+    roles: ["gestora", "vendas", "aplicadora"],
+  },
+  { pattern: /^\/patients\/new\/?$/, roles: ["gestora"] },
   {
     pattern: /^\/patients\/[^/]+\/history\/?$/,
     roles: ["gestora", "vendas"],
   },
-  {
-    pattern: /^\/patients\/[^/]+\/edit\/?$/,
-    roles: ["gestora", "vendas"],
-  },
+  { pattern: /^\/patients\/[^/]+\/edit\/?$/, roles: ["gestora"] },
+  { pattern: /^\/sessions\/?$/, roles: ["gestora", "vendas", "aplicadora"] },
   { pattern: /^\/sessions\/new\/?$/, roles: ["gestora", "aplicadora"] },
+  {
+    pattern: /^\/sessions\/[^/]+\/?$/,
+    roles: ["gestora", "vendas", "aplicadora"],
+  },
   { pattern: /^\/areas\/new\/?$/, roles: ["gestora"] },
   { pattern: /^\/areas\/[^/]+\/edit\/?$/, roles: ["gestora"] },
   { pattern: /^\/packages\/new\/?$/, roles: ["gestora"] },
   { pattern: /^\/packages\/[^/]+\/edit\/?$/, roles: ["gestora"] },
+  { pattern: /^\/sales\/?$/, roles: ["gestora", "vendas"] },
   { pattern: /^\/sales\/new\/?$/, roles: ["gestora", "vendas"] },
-  { pattern: /^\/sales\/[^/]+\/edit\/?$/, roles: ["gestora", "vendas"] },
+  { pattern: /^\/sales\/[^/]+\/edit\/?$/, roles: ["gestora"] },
 ];
 
 export function getAllowedRoles(pathname: string): readonly Role[] | null {

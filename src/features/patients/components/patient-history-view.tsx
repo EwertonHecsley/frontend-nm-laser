@@ -258,7 +258,10 @@ export function PatientHistoryView({ patientId }: { patientId: string }) {
     isLoading: isLoadingSessions,
     refetch: refetchSessions,
   } = useApiQuery(
-    (signal) => sessionsService.listByPatient(patientId, { signal }),
+    (signal) =>
+      sessionsService
+        .overview({ patientId, limit: 500 }, { signal })
+        .then(({ sessions }) => sessions),
     `patient-history-sessions:${patientId}`,
   );
 

@@ -525,6 +525,7 @@ export function SessionsView({
       <SessionOpportunities
         refreshKey={opportunitiesRefreshKey}
         canSchedule={canSchedule}
+        canWrite={canWrite}
       />
 
       {isLoading && !data ? (

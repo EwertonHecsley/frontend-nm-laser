@@ -40,7 +40,6 @@ const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
   vendas: [
     "cities:read",
     "patients:read",
-    "patients:write",
     "appointments:read",
     "appointments:write",
     "appointments:delete",

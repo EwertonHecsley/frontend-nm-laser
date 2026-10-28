@@ -270,7 +270,7 @@ export function PatientsView({
     <div className="space-y-6">
       <PageHeader
         title="Pacientes"
-        description="Consulte o cadastro por nome ou CPF. A edição é permitida para gestora e vendas; a exclusão é exclusiva da gestora."
+        description="Consulte o cadastro por nome ou CPF e acesse o histórico de cada paciente."
         actions={createAction}
       />
 

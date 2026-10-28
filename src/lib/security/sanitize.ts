@@ -17,8 +17,8 @@ export function uppercaseText(value: string): string {
   return value.toLocaleUpperCase("pt-BR");
 }
 
-export function onlyDigits(value: string): string {
-  return value.replace(/\D/g, "");
+export function onlyDigits(value: string | null | undefined): string {
+  return (value ?? "").replace(/\D/g, "");
 }
 
 export function sanitizeSingleLine(value: string, maxLength: number): string {

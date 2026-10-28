@@ -20,6 +20,11 @@ const ALLOWED_RESOURCES = new Set([
 ]);
 
 const READ_PERMISSIONS: Partial<Record<string, Permission>> = {
+  cities: "cities:read",
+  patients: "patients:read",
+  appointments: "appointments:read",
+  sessions: "sessions:read",
+  sales: "sales:write",
   users: "users:read",
 };
 
@@ -109,7 +114,10 @@ async function handle(
   }
 
   if (method === "GET") {
-    const requiredPermission = READ_PERMISSIONS[resource];
+    const requiredPermission =
+      resource === "sales" && rest[0] === "opportunities"
+        ? "sessions:read"
+        : READ_PERMISSIONS[resource];
 
     if (
       requiredPermission &&
