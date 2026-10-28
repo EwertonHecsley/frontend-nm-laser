@@ -229,6 +229,92 @@ function PatientSalesSection({
   );
 }
 
+
+function PendingPaymentsSection({
+  consultantId,
+  canWrite,
+}: {
+  consultantId?: string;
+  canWrite: boolean;
+}) {
+  const { data, isLoading, error, refetch } = useApiQuery(
+    (signal) =>
+      salesService.list(
+        { consultantId, paymentMethod: undefined },
+        { signal },
+      ),
+    `pending-payments:${consultantId ?? "all"}`,
+  );
+
+  const pending = (data ?? []).filter(
+    (sale) => sale.paymentStatus === "open",
+  );
+
+  async function confirm(id: string) {
+    await salesService.update(id, { paymentStatus: "confirmed" });
+    refetch();
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-base">Pagamentos pendentes</CardTitle>
+        <CardDescription>
+          Vendas registradas como abertas aguardando confirmação do pagamento.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        {isLoading ? (
+          <Skeleton className="h-20 w-full" />
+        ) : error ? (
+          <Alert variant="destructive">
+            <AlertTriangle className="size-4" />
+            <AlertTitle>Não foi possível carregar os pagamentos pendentes</AlertTitle>
+            <AlertDescription className="space-y-3">
+              <p>{error}</p>
+              <Button type="button" size="sm" onClick={refetch}>
+                <RefreshCw className="size-4" />
+                Tentar novamente
+              </Button>
+            </AlertDescription>
+          </Alert>
+        ) : pending.length === 0 ? (
+          <p className="text-sm text-muted-foreground">
+            Nenhuma venda pendente de pagamento.
+          </p>
+        ) : (
+          <div className="space-y-2">
+            {pending.map((sale) => (
+              <div
+                key={sale.id}
+                className="flex flex-wrap items-center justify-between gap-3 rounded-lg border px-3 py-2"
+              >
+                <div className="space-y-0.5">
+                  <p className="text-sm font-medium">
+                    {sale.patient?.fullName ?? "Paciente"}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {sale.package?.name ?? "Pacote"} · {sale.value}
+                  </p>
+                </div>
+                {canWrite && (
+                  <Button
+                    type="button"
+                    size="sm"
+                    onClick={() => void confirm(sale.id)}
+                  >
+                    Confirmar pagamento
+                  </Button>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
 export function SalesView({
   initialPatientId,
   canWrite,
@@ -271,6 +357,13 @@ export function SalesView({
         }
         actions={createAction}
       />
+
+      {(isManager || isVendor) && (
+        <PendingPaymentsSection
+          consultantId={isVendor ? userId : undefined}
+          canWrite={canWrite}
+        />
+      )}
 
       {isManager ? (
         <SalesManagerDashboard canWrite={canWrite} />

@@ -9,6 +9,10 @@ export const PAYMENT_METHODS = [
 
 export type PaymentMethod = (typeof PAYMENT_METHODS)[number];
 
+export const SALE_PAYMENT_STATUSES = ["open", "confirmed"] as const;
+
+export type SalePaymentStatus = (typeof SALE_PAYMENT_STATUSES)[number];
+
 export interface SaleAreaBalance {
   areaId: string;
   areaName: string;
@@ -49,6 +53,7 @@ export interface Sale extends AuditFields {
   value: string;
   discount: string | null;
   paymentMethod: PaymentMethod;
+  paymentStatus: SalePaymentStatus;
   patient: SalePatientSummary | null;
   city: SaleCitySummary | null;
   consultant: SaleConsultantSummary | null;
@@ -85,6 +90,7 @@ export interface UpdateSaleInput {
   value?: string;
   discount?: string | null;
   paymentMethod?: PaymentMethod;
+  paymentStatus?: SalePaymentStatus;
 }
 
 export interface SaleOpportunityArea {
