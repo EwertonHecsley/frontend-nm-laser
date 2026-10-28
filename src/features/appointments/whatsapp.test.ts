@@ -8,22 +8,22 @@ import {
   shouldShowAppointmentWhatsApp,
 } from "./whatsapp";
 
-test("enables appointment WhatsApp actions only for sales", () => {
+test("enables appointment WhatsApp actions for sales and management", () => {
   assert.equal(canUseAppointmentWhatsApp("vendas"), true);
-  assert.equal(canUseAppointmentWhatsApp("gestora"), false);
+  assert.equal(canUseAppointmentWhatsApp("gestora"), true);
   assert.equal(canUseAppointmentWhatsApp("aplicadora"), false);
   assert.equal(shouldShowAppointmentWhatsApp("vendas", true), true);
   assert.equal(shouldShowAppointmentWhatsApp("vendas", false), false);
-  assert.equal(shouldShowAppointmentWhatsApp("gestora", true), false);
+  assert.equal(shouldShowAppointmentWhatsApp("gestora", true), true);
   assert.equal(shouldShowAppointmentWhatsApp("aplicadora", true), false);
   assert.equal(
-    getAppointmentWhatsAppConfirmationHref(
+    typeof getAppointmentWhatsAppConfirmationHref(
       "gestora",
       { fullName: "Maria Silva", whatsapp: "83999999999" },
       "27/10/2026 às 14:30",
       "Patos",
     ),
-    null,
+    "string",
   );
   assert.equal(
     getAppointmentWhatsAppConfirmationHref(

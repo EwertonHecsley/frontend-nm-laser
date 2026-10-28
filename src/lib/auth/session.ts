@@ -36,11 +36,14 @@ export async function getServerSession(): Promise<AuthUser | null> {
     return null;
   }
 
+  const email = decodeSessionHint(
+    cookieStore.get(SESSION_HINT_COOKIE)?.value,
+  );
+
   return {
     id: payload.sub,
+    name: payload.name || email,
     role: payload.role,
-    email: decodeSessionHint(
-      cookieStore.get(SESSION_HINT_COOKIE)?.value,
-    ),
+    email,
   };
 }

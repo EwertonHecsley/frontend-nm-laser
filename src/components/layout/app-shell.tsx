@@ -75,7 +75,7 @@ const NAV_ITEMS: readonly NavItem[] = [
     label: "Vendas",
     href: "/sales",
     icon: BadgeDollarSign,
-    permission: "sales:write",
+    permission: "sales:read",
   },
   {
     label: "Equipe",

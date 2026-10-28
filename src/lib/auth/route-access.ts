@@ -17,12 +17,19 @@ const ROUTE_ACCESS_RULES: readonly RouteAccessRule[] = [
     pattern: /^\/patients\/?$/,
     roles: ["gestora", "vendas", "aplicadora"],
   },
-  { pattern: /^\/patients\/new\/?$/, roles: ["gestora"] },
+  { pattern: /^\/patients\/new\/?$/, roles: ["gestora", "vendas"] },
   {
     pattern: /^\/patients\/[^/]+\/history\/?$/,
+    roles: ["gestora", "vendas", "aplicadora"],
+  },
+  {
+    pattern: /^\/patients\/[^/]+\/edit\/?$/,
     roles: ["gestora", "vendas"],
   },
-  { pattern: /^\/patients\/[^/]+\/edit\/?$/, roles: ["gestora"] },
+  {
+    pattern: /^\/appointments\/new\/?$/,
+    roles: ["gestora", "vendas"],
+  },
   { pattern: /^\/sessions\/?$/, roles: ["gestora", "vendas", "aplicadora"] },
   { pattern: /^\/sessions\/new\/?$/, roles: ["gestora", "aplicadora"] },
   {
@@ -33,7 +40,10 @@ const ROUTE_ACCESS_RULES: readonly RouteAccessRule[] = [
   { pattern: /^\/areas\/[^/]+\/edit\/?$/, roles: ["gestora"] },
   { pattern: /^\/packages\/new\/?$/, roles: ["gestora"] },
   { pattern: /^\/packages\/[^/]+\/edit\/?$/, roles: ["gestora"] },
-  { pattern: /^\/sales\/?$/, roles: ["gestora", "vendas"] },
+  {
+    pattern: /^\/sales\/?$/,
+    roles: ["gestora", "vendas", "aplicadora"],
+  },
   { pattern: /^\/sales\/new\/?$/, roles: ["gestora", "vendas"] },
   { pattern: /^\/sales\/[^/]+\/edit\/?$/, roles: ["gestora"] },
 ];

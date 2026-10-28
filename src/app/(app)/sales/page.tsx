@@ -20,7 +20,7 @@ export default async function SalesPage({ searchParams }: SalesPageProps) {
     redirect(LOGIN_PATH);
   }
 
-  if (!hasPermission(user.role, "sales:write")) {
+  if (!hasPermission(user.role, "sales:read")) {
     redirect(FORBIDDEN_PATH);
   }
 

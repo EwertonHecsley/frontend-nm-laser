@@ -29,7 +29,7 @@ export default async function NewAppointmentPage({
     redirect(LOGIN_PATH);
   }
 
-  if (!hasPermission(user.role, "appointments:write")) {
+  if (!hasPermission(user.role, "appointments:create")) {
     redirect(FORBIDDEN_PATH);
   }
 

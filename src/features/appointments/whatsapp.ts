@@ -8,7 +8,7 @@ export type AppointmentWhatsAppPatient = Pick<
 >;
 
 export function canUseAppointmentWhatsApp(role: Role): boolean {
-  return role === "vendas";
+  return role === "vendas" || role === "gestora";
 }
 
 export function shouldShowAppointmentWhatsApp(

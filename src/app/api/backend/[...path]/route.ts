@@ -24,7 +24,6 @@ const READ_PERMISSIONS: Partial<Record<string, Permission>> = {
   patients: "patients:read",
   appointments: "appointments:read",
   sessions: "sessions:read",
-  sales: "sales:write",
   users: "users:read",
 };
 
@@ -43,7 +42,7 @@ const METHOD_PERMISSIONS: Record<
     DELETE: "patients:delete",
   },
   appointments: {
-    POST: "appointments:write",
+    POST: "appointments:create",
     PATCH: "appointments:write",
     DELETE: "appointments:delete",
   },
@@ -115,8 +114,10 @@ async function handle(
 
   if (method === "GET") {
     const requiredPermission =
-      resource === "sales" && rest[0] === "opportunities"
-        ? "sessions:read"
+      resource === "sales"
+        ? rest[0] === "opportunities"
+          ? "sessions:read"
+          : "sales:read"
         : READ_PERMISSIONS[resource];
 
     if (

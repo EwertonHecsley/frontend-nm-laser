@@ -1,4 +1,5 @@
 import { ArrowLeft } from "lucide-react";
+import { cookies } from "next/headers";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
@@ -8,13 +9,46 @@ import { SessionForm } from "@/features/sessions/components/session-form";
 import {
   FORBIDDEN_PATH,
   LOGIN_PATH,
+  SESSION_COOKIE,
 } from "@/lib/auth/constants";
 import { hasPermission } from "@/lib/auth/permissions";
 import { getServerSession } from "@/lib/auth/session";
+import { backendFetch } from "@/lib/server/backend";
+import type { AuthUser } from "@/types";
 
 export const metadata = {
   title: "Nova sessão",
 };
+
+async function withCurrentName(user: AuthUser): Promise<AuthUser> {
+  if (user.role !== "aplicadora" || user.name !== user.email) {
+    return user;
+  }
+
+  const token = (await cookies()).get(SESSION_COOKIE)?.value;
+
+  if (!token) {
+    return user;
+  }
+
+  try {
+    const response = await backendFetch("auth/me", {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+
+    if (!response.ok) {
+      return user;
+    }
+
+    const payload = (await response.json()) as { name?: unknown };
+
+    return typeof payload.name === "string"
+      ? { ...user, name: payload.name }
+      : user;
+  } catch {
+    return user;
+  }
+}
 
 interface NewSessionPageProps {
   searchParams: Promise<{
@@ -45,6 +79,7 @@ export default async function NewSessionPage({
   const initialPatientId = getParam(params.patientId);
   const initialSaleId = getParam(params.saleId);
   const initialGroupId = getParam(params.groupId);
+  const currentUser = await withCurrentName(user);
 
   return (
     <div className="space-y-6">
@@ -67,6 +102,7 @@ export default async function NewSessionPage({
         }
       />
       <SessionForm
+        currentUser={currentUser}
         initialPatientId={initialPatientId}
         initialSaleId={initialSaleId}
         initialGroupId={initialGroupId}

@@ -37,6 +37,7 @@ export function decodeAccessToken(token: string): AccessTokenPayload | null {
     return {
       sub: payload.sub,
       role: payload.role,
+      name: typeof payload.name === "string" ? payload.name : undefined,
       iat: typeof payload.iat === "number" ? payload.iat : undefined,
       exp: typeof payload.exp === "number" ? payload.exp : undefined,
     };

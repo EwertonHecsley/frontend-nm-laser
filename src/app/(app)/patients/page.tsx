@@ -24,7 +24,7 @@ export default async function PatientsPage() {
     <PatientsView
       canWrite={hasPermission(user.role, "patients:write")}
       canDelete={hasPermission(user.role, "patients:delete")}
-      canViewHistory={user.role === "gestora" || user.role === "vendas"}
+      canViewHistory={hasPermission(user.role, "patients:read")}
     />
   );
 }

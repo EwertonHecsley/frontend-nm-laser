@@ -250,9 +250,11 @@ function StatusControl({
 }
 
 export function AppointmentsView({
+  canCreate,
   canWrite,
   currentUser,
 }: {
+  canCreate: boolean;
   canWrite: boolean;
   currentUser: AuthUser;
 }) {
@@ -540,7 +542,7 @@ export function AppointmentsView({
     }
   }
 
-  const createAction = canWrite ? (
+  const createAction = canCreate ? (
     <Button asChild>
       <Link href="/appointments/new">
         <Plus className="size-4" />
@@ -731,7 +733,7 @@ export function AppointmentsView({
                 <p className="text-sm text-muted-foreground">
                   {hasFilters
                     ? "Ajuste o período ou os filtros para ver outros resultados."
-                    : canWrite
+                    : canCreate
                       ? "Agende o primeiro horário para começar."
                       : "Ainda não há agendamentos cadastrados."}
                 </p>
@@ -745,7 +747,7 @@ export function AppointmentsView({
                 >
                   Limpar filtros
                 </Button>
-              ) : canWrite ? (
+              ) : canCreate ? (
                 <Button asChild size="sm">
                   <Link href="/appointments/new">
                     <Plus className="size-4" />

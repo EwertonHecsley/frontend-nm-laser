@@ -49,10 +49,12 @@ import {
   salesService,
   sessionsService,
 } from "@/services";
+import type { AuthUser } from "@/types";
 
 const NO_APPOINTMENT = "none";
 
 interface SessionFormProps {
+  currentUser: AuthUser;
   initialPatientId?: string;
   initialSaleId?: string;
   initialGroupId?: string;
@@ -60,12 +62,14 @@ interface SessionFormProps {
 }
 
 export function SessionForm({
+  currentUser,
   initialPatientId = "",
   initialSaleId = "",
   initialGroupId = "",
   canCreateSale = false,
 }: SessionFormProps) {
   const router = useRouter();
+  const isApplicator = currentUser.role === "aplicadora";
 
   const {
     control,
@@ -85,7 +89,7 @@ export function SessionForm({
       areaIds: [],
       sessionNumber: "",
       performedAt: "",
-      applicatorId: "",
+      applicatorId: isApplicator ? currentUser.id : "",
       potency: "",
       frequency: "",
       technique: "",
@@ -409,30 +413,45 @@ export function SessionForm({
               <FieldError errors={[errors.energyAccumulated]} />
             </Field>
 
-            <Field
-              className="sm:col-span-2"
-              data-invalid={Boolean(errors.applicatorId)}
-            >
-              <FieldLabel htmlFor="applicatorId">
-                Aplicador (opcional)
-              </FieldLabel>
-              <Input
-                id="applicatorId"
-                placeholder="UUID do aplicador"
-                autoComplete="off"
-                className="h-11"
-                aria-invalid={Boolean(errors.applicatorId)}
-                {...register("applicatorId")}
-              />
-              {errors.applicatorId ? (
-                <FieldError errors={[errors.applicatorId]} />
-              ) : (
+            {isApplicator ? (
+              <Field className="sm:col-span-2">
+                <FieldLabel htmlFor="applicatorId">Aplicadora</FieldLabel>
+                <Input
+                  id="applicatorId"
+                  value={currentUser.name}
+                  readOnly
+                  className="h-11"
+                />
                 <FieldDescription>
-                  Informe o UUID de uma aplicadora cadastrada em Equipe ou deixe
-                  em branco.
+                  A sessão será atribuída automaticamente a você.
                 </FieldDescription>
-              )}
-            </Field>
+              </Field>
+            ) : (
+              <Field
+                className="sm:col-span-2"
+                data-invalid={Boolean(errors.applicatorId)}
+              >
+                <FieldLabel htmlFor="applicatorId">
+                  Aplicador (opcional)
+                </FieldLabel>
+                <Input
+                  id="applicatorId"
+                  placeholder="UUID do aplicador"
+                  autoComplete="off"
+                  className="h-11"
+                  aria-invalid={Boolean(errors.applicatorId)}
+                  {...register("applicatorId")}
+                />
+                {errors.applicatorId ? (
+                  <FieldError errors={[errors.applicatorId]} />
+                ) : (
+                  <FieldDescription>
+                    Informe o UUID de uma aplicadora cadastrada em Equipe ou
+                    deixe em branco.
+                  </FieldDescription>
+                )}
+              </Field>
+            )}
 
             <Field
               className="sm:col-span-2"

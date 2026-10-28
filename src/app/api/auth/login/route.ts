@@ -93,6 +93,7 @@ export async function POST(request: Request): Promise<Response> {
       {
         user: {
           id: tokenPayload.sub,
+          name: tokenPayload.name ?? email,
           email,
           role: tokenPayload.role,
         },
