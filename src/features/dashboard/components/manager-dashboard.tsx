@@ -28,6 +28,8 @@ import { useApiQuery } from "@/hooks";
 import { formatCurrency } from "@/lib/format/currency";
 import { toEndOfDayIso, toStartOfDayIso } from "@/lib/format/date";
 import { reportsService } from "@/services/reports.service";
+import { salesService } from "@/services/sales.service";
+import Link from "next/link";
 import type { Appointment, AppointmentStatus } from "@/types";
 
 const STATUS_ITEMS: Array<{
@@ -289,6 +291,17 @@ export function ManagerDashboard() {
     `manager-report:${period.from}:${period.to}`,
     { enabled: Boolean(from && to && period.from <= period.to) },
   );
+  const { data: allSales } = useApiQuery(
+    (signal) => salesService.list({}, { signal }),
+    "manager-pending-payments",
+  );
+  const pendingSales = (allSales ?? []).filter(
+    (sale) => sale.paymentStatus === "open",
+  );
+  const pendingTotal = pendingSales.reduce(
+    (total, sale) => total + Number(sale.value || 0),
+    0,
+  );
   const statusCounts = data?.appointmentCounts;
   const flowAppointments = useMemo(() => data?.appointments ?? [], [data]);
   const averageTicket =
@@ -308,6 +321,29 @@ export function ManagerDashboard() {
         title="Dashboard gerencial"
         description="Indicadores consolidados de pacientes, agendamentos, sessões e situação financeira."
       />
+
+      <Link href="/sales" className="block">
+        <Card className="transition-colors hover:border-primary/40">
+          <CardHeader className="flex-row items-start justify-between gap-3">
+            <div className="space-y-1">
+              <CardDescription>Valores a receber</CardDescription>
+              <CardTitle className="text-2xl tabular-nums">
+                {pendingTotal.toLocaleString("pt-BR", {
+                  style: "currency",
+                  currency: "BRL",
+                })}
+              </CardTitle>
+            </div>
+            <span className="grid size-10 place-items-center rounded-lg bg-amber-500/10 text-amber-700">
+              <CircleDollarSign className="size-5" aria-hidden="true" />
+            </span>
+          </CardHeader>
+          <CardContent className="text-xs text-muted-foreground">
+            {pendingSales.length} venda(s) com pagamento ainda não confirmado.
+            Clique para ver os clientes pendentes.
+          </CardContent>
+        </Card>
+      </Link>
 
       <Card>
         <CardHeader>

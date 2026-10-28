@@ -49,6 +49,9 @@ function toUpdatePayload(input: UpdateSaleInput) {
     ...(input.paymentMethod
       ? { paymentMethod: input.paymentMethod }
       : {}),
+    ...(input.paymentStatus
+      ? { paymentStatus: input.paymentStatus }
+      : {}),
   };
 }
 
