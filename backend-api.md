@@ -16,6 +16,8 @@ Base URL: `http://localhost:3030` (configurável via env). Autenticação: JWT B
 - PATCH /users/:id `{ name?, email?, role?, password? }`
 - DELETE /users/:id — bloqueia se houver vendas, agendamentos ou sessões vinculadas
 
+O nome do profissional nos agendamentos deve ser retornado diretamente por `GET /appointments` em `professionalName`, sem ampliar o acesso a `/users`.
+
 ## Módulos e endpoints
 
 ### Cidades

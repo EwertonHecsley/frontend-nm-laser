@@ -310,7 +310,7 @@ Query params opcionais:
 - `cityId`: UUID;
 - `professionalId`: UUID.
 
-Resposta: array de registros de agendamento. Não há paginação, ordenação declarada ou expansão de paciente/cidade/profissional; o frontend pode precisar buscar esses registros separadamente.
+Resposta: array de registros de agendamento contendo `professionalName` (`string | null`), além de `professionalId`, para identificar o profissional sem exigir acesso a `/users`. Não há paginação nem ordenação declarada.
 
 ### `POST /appointments`
 

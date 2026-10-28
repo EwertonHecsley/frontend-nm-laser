@@ -112,6 +112,18 @@ interface AppointmentWhatsAppLookup {
   failed: boolean;
 }
 
+function getAppointmentProfessionalName(
+  appointment: Appointment,
+  professionalNames: Map<string, string>,
+): string {
+  return (
+    appointment.professionalName ??
+    (appointment.professionalId
+      ? professionalNames.get(appointment.professionalId) ?? "—"
+      : "—")
+  );
+}
+
 async function loadAppointmentWhatsAppContacts(
   patientIds: string[],
   signal: AbortSignal,
@@ -326,10 +338,10 @@ export function AppointmentsView({
       ]),
     );
 
-    names.set(currentUser.id, "Você");
+    names.set(currentUser.id, currentUser.name);
 
     return names;
-  }, [professionals, currentUser.id]);
+  }, [professionals, currentUser.id, currentUser.name]);
 
   const patientsById = useMemo(
     () => new Map((patients ?? []).map((patient) => [patient.id, patient])),
@@ -397,12 +409,8 @@ export function AppointmentsView({
           break;
         case "professional":
           comparison = COLLATOR.compare(
-            a.professionalId
-              ? (professionalNames.get(a.professionalId) ?? "")
-              : "",
-            b.professionalId
-              ? (professionalNames.get(b.professionalId) ?? "")
-              : "",
+            getAppointmentProfessionalName(a, professionalNames),
+            getAppointmentProfessionalName(b, professionalNames),
           );
           break;
         case "status":
@@ -866,11 +874,11 @@ export function AppointmentsView({
                           <TableCell>{cityName}</TableCell>
                           <TableCell className="hidden text-muted-foreground xl:table-cell">
                             {appointment.professionalId
-                              ? (professionalNames.get(
-                                  appointment.professionalId,
-                                ) ??
-                                `${appointment.professionalId.slice(0, 8)}…`)
-                              : "—"}
+                            ? getAppointmentProfessionalName(
+                                appointment,
+                                professionalNames,
+                              )
+                            : "—"}
                           </TableCell>
                           <TableCell>
                             <StatusControl
@@ -1019,11 +1027,10 @@ export function AppointmentsView({
                             </p>
                             <p className="text-xs text-muted-foreground">
                               Profissional:{" "}
-                              {appointment.professionalId
-                                ? (professionalNames.get(
-                                    appointment.professionalId,
-                                  ) ?? "—")
-                                : "—"}
+                              {getAppointmentProfessionalName(
+                                appointment,
+                                professionalNames,
+                              )}
                             </p>
                           </div>
                           {canWrite && (
