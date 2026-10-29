@@ -82,5 +82,8 @@ export function getErrorMessage(error: unknown): string {
 }
 
 export function isAbortError(error: unknown): boolean {
-  return error instanceof DOMException && error.name === "AbortError";
+  return (
+    error instanceof DOMException &&
+    (error.name === "AbortError" || error.name === "TimeoutError")
+  );
 }
