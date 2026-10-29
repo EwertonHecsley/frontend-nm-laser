@@ -31,6 +31,7 @@ function toCreatePayload(input: CreateSaleInput) {
       ? { discount: sanitizeSingleLine(input.discount, 40) }
       : {}),
     paymentMethod: input.paymentMethod,
+    paymentStatus: "open",
   };
 }
 

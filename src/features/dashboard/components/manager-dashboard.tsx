@@ -299,7 +299,8 @@ export function ManagerDashboard() {
     (sale) => sale.paymentStatus === "open",
   );
   const pendingTotal = pendingSales.reduce(
-    (total, sale) => total + Number(sale.value || 0),
+    (total, sale) =>
+      total + Math.max(0, Number(sale.value || 0) - Number(sale.discount || 0)),
     0,
   );
   const statusCounts = data?.appointmentCounts;

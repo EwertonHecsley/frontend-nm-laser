@@ -76,13 +76,13 @@ Status da sessão: completed, in_progress, cancelled (padrão: completed).
 ### Vendas
 - GET /sales?patientId= — vendas da paciente com saldo por área:
   `areas: [{ areaId, areaName, sessionsCount, used, remaining }]`
-- POST /sales { patientId, packageId, consultantId?, value, discount? } (gestora, vendas)
+- POST /sales { patientId, packageId, consultantId?, value, discount?, paymentMethod, paymentStatus? } (gestora, vendas). Novas vendas iniciam com `paymentStatus: "open"`; valores a receber são calculados pelo valor da venda menos o desconto.
 - GET /sales/:id
-- PATCH /sales/:id { consultantId?, value?, discount? } (gestora, vendas)
+- PATCH /sales/:id { value?, discount?, paymentMethod?, paymentStatus? } (gestora, vendas). Gestora confirma qualquer venda; vendas confirma somente as próprias com `paymentStatus: "confirmed"`. Venda confirmada não pode ser reaberta.
 - DELETE /sales/:id (gestora) — bloqueia se houver tratamentos, sessões ou pagamentos vinculados
 
 ### Pagamentos
-- Não será implementado módulo de pagamentos. As compras são lançadas em `/sales` e o faturamento é acompanhado pela gestora.
+- O status de confirmação é controlado na venda. Endpoints para administrar parcelas ou pagamentos individuais não estão implementados.
 
 ## IDs e versionamento
 - UUIDs estáveis gerados no servidor; version e timestamps em todas entidades.

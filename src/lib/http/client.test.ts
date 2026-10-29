@@ -198,6 +198,31 @@ describe("HTTP Client - fetch", () => {
     window.removeEventListener("nm:unauthorized", listener);
   });
 
+  it("should not treat a login 401 as an expired session", async () => {
+    const listener = vi.fn();
+    window.addEventListener("nm:unauthorized", listener);
+
+    vi.spyOn(global, "fetch").mockResolvedValue(
+      jsonResponse(
+        { message: "E-mail ou senha inválidos." },
+        { status: 401 },
+      ),
+    );
+
+    await expect(
+      http.post("api/auth/login", {
+        email: "user@example.com",
+        password: "password123",
+      }),
+    ).rejects.toMatchObject({
+      message: "E-mail ou senha inválidos.",
+      status: 401,
+    });
+    expect(listener).not.toHaveBeenCalled();
+
+    window.removeEventListener("nm:unauthorized", listener);
+  });
+
   it("should throw ApiError with generic message for 500 responses", async () => {
     vi.spyOn(global, "fetch").mockResolvedValue(
       jsonResponse(

@@ -3,12 +3,14 @@
 import {
   AlertTriangle,
   BadgeDollarSign,
+  Loader2,
   Plus,
   RefreshCw,
   UserRound,
 } from "lucide-react";
 import Link from "next/link";
 import { useMemo, useState } from "react";
+import { toast } from "sonner";
 
 import { PageHeader } from "@/components/layout/page-header";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -31,11 +33,15 @@ import {
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { PatientCombobox } from "@/features/appointments/components/patient-combobox";
-import { SaleCard } from "@/features/sales/components/sale-card";
+import {
+  formatCurrency,
+  SaleCard,
+} from "@/features/sales/components/sale-card";
 import { SalesManagerDashboard } from "@/features/sales/components/sales-manager-dashboard";
 import { SalesVendorDashboard } from "@/features/sales/components/sales-vendor-dashboard";
 import { PAYMENT_METHOD_OPTIONS } from "@/features/sales/utils";
 import { useApiQuery, usePagination } from "@/hooks";
+import { getErrorMessage } from "@/lib/http/errors";
 import { packagesService, salesService } from "@/services";
 import type { PaymentMethod, SaleListFilters, Role } from "@/types";
 
@@ -249,10 +255,20 @@ function PendingPaymentsSection({
   const pending = (data ?? []).filter(
     (sale) => sale.paymentStatus === "open",
   );
+  const [confirmingId, setConfirmingId] = useState<string | null>(null);
 
   async function confirm(id: string) {
-    await salesService.update(id, { paymentStatus: "confirmed" });
-    refetch();
+    setConfirmingId(id);
+
+    try {
+      await salesService.update(id, { paymentStatus: "confirmed" });
+      toast.success("Pagamento confirmado.");
+      refetch();
+    } catch (error) {
+      toast.error(getErrorMessage(error));
+    } finally {
+      setConfirmingId(null);
+    }
   }
 
   return (
@@ -294,16 +310,32 @@ function PendingPaymentsSection({
                     {sale.patient?.fullName ?? "Paciente"}
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    {sale.package?.name ?? "Pacote"} · {sale.value}
+                    {sale.package?.name ?? "Pacote"} ·{" "}
+                    {formatCurrency(
+                      String(
+                        Math.max(
+                          0,
+                          Number(sale.value) - Number(sale.discount ?? 0),
+                        ),
+                      ),
+                    )}
                   </p>
                 </div>
                 {canWrite && (
                   <Button
                     type="button"
                     size="sm"
+                    disabled={confirmingId === sale.id}
                     onClick={() => void confirm(sale.id)}
                   >
-                    Confirmar pagamento
+                    {confirmingId === sale.id ? (
+                      <>
+                        <Loader2 className="size-4 animate-spin" />
+                        Confirmando…
+                      </>
+                    ) : (
+                      "Confirmar pagamento"
+                    )}
                   </Button>
                 )}
               </div>

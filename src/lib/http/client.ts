@@ -57,6 +57,7 @@ async function request<T>(
   const basePath = normalizedPath.startsWith("api/")
     ? `/${normalizedPath}`
     : `${API_BASE_PATH}/${normalizedPath}`;
+  const isLoginRequest = basePath === "/api/auth/login";
   const url = `${basePath}${buildQueryString(query)}`;
   const headers = new Headers(customHeaders);
 
@@ -106,7 +107,15 @@ async function request<T>(
     : await response.text().catch(() => null);
 
   if (!response.ok) {
-    if (response.status === 401 && typeof window !== "undefined") {
+    if (response.status === 401 && isLoginRequest) {
+      throw new ApiError("E-mail ou senha inválidos.", 401, payload);
+    }
+
+    if (
+      response.status === 401 &&
+      !isLoginRequest &&
+      typeof window !== "undefined"
+    ) {
       window.dispatchEvent(new Event("nm:unauthorized"));
     }
 
