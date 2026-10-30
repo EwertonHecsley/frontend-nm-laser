@@ -197,9 +197,9 @@ function getPageTitle(pathname: string): string {
   return "CRM NM Laser";
 }
 
-function getInitials(email: string): string {
-  const localPart = email.split("@")[0] ?? "";
-  const parts = localPart.split(/[._-]+/).filter(Boolean);
+function getInitials(value: string): string {
+  const localPart = value.split("@")[0] ?? "";
+  const parts = localPart.split(/[.\s_-]+/).filter(Boolean);
 
   if (parts.length >= 2) {
     return `${parts[0]![0] ?? ""}${parts[1]![0] ?? ""}`.toUpperCase();
@@ -271,6 +271,7 @@ function SidebarContent({
   showCollapseButton = false,
 }: SidebarContentProps) {
   const pathname = usePathname();
+  const displayName = user.name.trim() || user.email;
 
   return (
     <div className="flex h-full min-h-0 flex-col">
@@ -362,13 +363,13 @@ function SidebarContent({
         >
           <Avatar className="size-9 shrink-0">
             <AvatarFallback className="bg-secondary text-xs font-semibold text-secondary-foreground">
-              {getInitials(user.email)}
+              {getInitials(displayName)}
             </AvatarFallback>
           </Avatar>
 
           {!collapsed && (
             <div className="min-w-0 flex-1">
-              <p className="truncate text-sm font-medium">{user.email}</p>
+              <p className="truncate text-sm font-medium">{displayName}</p>
               <p className="text-xs text-muted-foreground">
                 {getRoleLabel(user.role)}
               </p>
@@ -422,7 +423,7 @@ function UserMenu({
             </AvatarFallback>
           </Avatar>
           <span className="hidden max-w-40 truncate text-sm sm:block">
-            {user.email}
+            {user.name}
           </span>
           <Badge variant="secondary" className="hidden md:inline-flex">
             {getRoleLabel(user.role)}
@@ -432,7 +433,7 @@ function UserMenu({
       <DropdownMenuContent align="end" className="w-60">
         <DropdownMenuLabel className="space-y-1">
           <span className="block truncate text-sm font-medium">
-            {user.email}
+            {user.name}
           </span>
           <span className="block text-xs font-normal text-muted-foreground">
             Perfil: {getRoleLabel(user.role)}

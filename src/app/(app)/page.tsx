@@ -77,7 +77,7 @@ export default async function DashboardPage() {
   return (
     <div className="space-y-8">
       <section className="overflow-hidden rounded-2xl border bg-card shadow-sm">
-        <div className="relative bg-gradient-to-br from-[#155e63] via-[#0f766e] to-[#115e59] p-6 text-white md:p-8">
+        <div className="relative bg-linear-to-br from-[#155e63] via-[#0f766e] to-[#115e59] p-6 text-white md:p-8">
           <div
             className="pointer-events-none absolute -right-16 -top-20 size-64 rounded-full bg-white/10 blur-2xl"
             aria-hidden="true"
@@ -85,7 +85,7 @@ export default async function DashboardPage() {
           <div className="relative max-w-2xl space-y-3">
             <p className="text-sm text-white/75">Painel operacional</p>
             <h1 className="text-2xl font-semibold tracking-tight md:text-3xl">
-              Olá, equipe NM Laser
+              Olá, {user.name}
             </h1>
             <p className="max-w-xl text-sm leading-relaxed text-white/85 md:text-base">
               {ROLE_ABILITIES[user.role]}
@@ -94,7 +94,7 @@ export default async function DashboardPage() {
               <Badge className="border-white/20 bg-white/15 text-white">
                 {getRoleLabel(user.role)}
               </Badge>
-              <span className="text-xs text-white/70">{user.email}</span>
+              <span className="text-xs text-white/70">{user.name}</span>
             </div>
           </div>
         </div>
