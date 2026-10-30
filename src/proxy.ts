@@ -5,6 +5,7 @@ import {
   LOGIN_PATH,
   SESSION_COOKIE,
   SESSION_HINT_COOKIE,
+  REFRESH_COOKIE,
 } from "@/lib/auth/constants";
 import { decodeAccessToken, isAccessTokenFresh } from "@/lib/auth/jwt";
 import { getAllowedRoles } from "@/lib/auth/route-access";
@@ -12,6 +13,7 @@ import { getAllowedRoles } from "@/lib/auth/route-access";
 function clearSession(response: NextResponse): NextResponse {
   response.cookies.delete(SESSION_COOKIE);
   response.cookies.delete(SESSION_HINT_COOKIE);
+  response.cookies.delete(REFRESH_COOKIE);
 
   return response;
 }
@@ -29,11 +31,28 @@ export function proxy(request: NextRequest): NextResponse {
     return token ? clearSession(NextResponse.next()) : NextResponse.next();
   }
 
+  // Access token expirado: se ainda existe um cookie de refresh token, a
+  // sessão pode ser renovada via /api/auth/refresh. Mantemos a navegação;
+  // o interceptor HTTP do client renova na primeira chamada de API.
   if (!session || !isAccessTokenFresh(session)) {
-    const loginUrl = new URL(LOGIN_PATH, request.url);
-    loginUrl.searchParams.set("next", `${pathname}${search}`);
+    const hasRefreshCookie =
+      Boolean(request.cookies.get(REFRESH_COOKIE)?.value) &&
+      request.cookies.get(REFRESH_COOKIE)?.value !== "";
 
-    return clearSession(NextResponse.redirect(loginUrl));
+    if (!hasRefreshCookie) {
+      const loginUrl = new URL(LOGIN_PATH, request.url);
+      loginUrl.searchParams.set("next", `${pathname}${search}`);
+
+      return clearSession(NextResponse.redirect(loginUrl));
+    }
+
+    // Sem access token válido, mas com refresh: removemos o access token
+    // vencido; o refresh token é preservado para /api/auth/refresh.
+    const response = NextResponse.next();
+    response.cookies.delete(SESSION_COOKIE);
+    response.cookies.delete(SESSION_HINT_COOKIE);
+
+    return response;
   }
 
   const allowedRoles = getAllowedRoles(pathname);

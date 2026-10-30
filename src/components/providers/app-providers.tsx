@@ -7,14 +7,28 @@ import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useAppStore } from "@/store";
 
+/**
+ * Escuta falhas de autenticação (401 após tentativa de renovação) e
+ * redireciona para o login preservando o destino original.
+ */
 export function AppProviders({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const redirecting = useRef(false);
 
   useEffect(() => {
-    function handleUnauthorized() {
+    function handleUnauthorized(event: Event) {
       if (redirecting.current) {
         return;
+      }
+
+      // Renovação não é possível (ex.: acessando a página de login).
+      if ("detail" in event) {
+        const { canRefresh } = (event as CustomEvent<{ canRefresh?: boolean }>)
+          .detail ?? { canRefresh: true };
+
+        if (canRefresh) {
+          return;
+        }
       }
 
       redirecting.current = true;

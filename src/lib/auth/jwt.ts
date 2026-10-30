@@ -1,4 +1,4 @@
-import { isRole, type AccessTokenPayload } from "@/types";
+import { isRole, type AccessTokenPayload, type RefreshTokenPayload } from "@/types";
 
 function decodeBase64Url(value: string): string {
   const normalized = value.replace(/-/g, "+").replace(/_/g, "/");
@@ -61,4 +61,40 @@ export function getSessionMaxAge(payload: AccessTokenPayload): number {
   const remaining = payload.exp - Math.floor(Date.now() / 1000);
 
   return Math.min(Math.max(remaining, 60), 60 * 60 * 24);
+}
+
+export const REFRESH_MAX_AGE_SECONDS = 60 * 60 * 24 * 7;
+
+export function decodeRefreshToken(token: string): RefreshTokenPayload | null {
+  const parts = token.split(".");
+
+  if (parts.length !== 3 || !parts[1]) {
+    return null;
+  }
+
+  try {
+    const payload = JSON.parse(decodeBase64Url(parts[1])) as Record<
+      string,
+      unknown
+    >;
+
+    if (typeof payload.sub !== "string") {
+      return null;
+    }
+
+    return {
+      sub: payload.sub,
+      iat: typeof payload.iat === "number" ? payload.iat : undefined,
+      exp: typeof payload.exp === "number" ? payload.exp : undefined,
+    };
+  } catch {
+    return null;
+  }
+}
+
+export function isRefreshTokenFresh(
+  payload: RefreshTokenPayload | null,
+  nowInSeconds = Math.floor(Date.now() / 1000),
+): payload is RefreshTokenPayload {
+  return Boolean(payload && (!payload.exp || payload.exp > nowInSeconds));
 }
