@@ -24,19 +24,35 @@ export const authService = {
     return response.user;
   },
 
-  async logout(): Promise<void> {
-    await http.post<void>("api/auth/logout");
+  async logout(options?: { signal?: AbortSignal }): Promise<void> {
+    // O refresh token vive em cookie HttpOnly, gerenciado pelo servidor.
+    await http.post<void>("api/auth/logout", undefined, options);
   },
 
-  async changePassword(input: ChangePasswordInput): Promise<void> {
-    await http.post<void>("api/auth/change-password", input);
+  async changePassword(
+    input: ChangePasswordInput,
+    options?: { signal?: AbortSignal },
+  ): Promise<{ message: string }> {
+    return http.post<{ message: string }>(
+      "api/auth/change-password",
+      input,
+      options,
+    );
   },
 
-  async getSession(options?: { signal?: AbortSignal }): Promise<AuthUser> {
-    const response = await http.get<AuthSessionResponse>("api/auth/session", {
-      signal: options?.signal,
-    });
+  async refreshSession(
+    options?: { signal?: AbortSignal },
+  ): Promise<AuthUser | null> {
+    try {
+      const response = await http.post<AuthSessionResponse>(
+        "api/auth/refresh",
+        undefined,
+        options,
+      );
 
-    return response.user;
+      return response.user;
+    } catch {
+      return null;
+    }
   },
 };

@@ -8,6 +8,17 @@ import { backendFetch } from "@/lib/server/backend";
 import { jsonError, isSameOriginRequest } from "@/lib/server/http";
 import type { LoginResponse } from "@/types";
 
+const MIN_REFRESH_TOKEN_LENGTH = 20;
+const MAX_REFRESH_TOKEN_LENGTH = 200;
+
+function isValidOpaqueRefreshToken(value: unknown): value is string {
+  return (
+    typeof value === "string" &&
+    value.length >= MIN_REFRESH_TOKEN_LENGTH &&
+    value.length <= MAX_REFRESH_TOKEN_LENGTH
+  );
+}
+
 const MAX_BODY_BYTES = 16 * 1024;
 
 const loginSchema = z.object({
@@ -65,6 +76,13 @@ export async function POST(request: Request): Promise<Response> {
         return jsonError(401, "E-mail ou senha inválidos.");
       }
 
+      if (response.status === 429) {
+        return jsonError(
+          429,
+          "Muitas tentativas de login. Aguarde alguns minutos e tente novamente.",
+        );
+      }
+
       if (response.status >= 500) {
         return jsonError(502, "O serviço de autenticação está indisponível.");
       }
@@ -75,19 +93,27 @@ export async function POST(request: Request): Promise<Response> {
       );
     }
 
-    const accessToken = (payload as LoginResponse | null)?.accessToken;
+    const loginResponse = payload as LoginResponse | null;
 
-    if (typeof accessToken !== "string") {
+    if (!loginResponse || typeof loginResponse.accessToken !== "string") {
       return jsonError(502, "Resposta de autenticação inválida.");
     }
 
-    const tokenPayload = decodeAccessToken(accessToken);
+    if (!isValidOpaqueRefreshToken(loginResponse.refreshToken)) {
+      return jsonError(502, "Resposta de autenticação inválida.");
+    }
+
+    const tokenPayload = decodeAccessToken(loginResponse.accessToken);
 
     if (!isAccessTokenFresh(tokenPayload)) {
       return jsonError(502, "O serviço retornou uma sessão inválida.");
     }
 
-    await setSessionCookies(accessToken, email, tokenPayload);
+    await setSessionCookies(
+      loginResponse.accessToken,
+      loginResponse.refreshToken,
+      tokenPayload,
+    );
 
     return Response.json(
       {

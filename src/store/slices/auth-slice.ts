@@ -35,8 +35,8 @@ export const createAuthSlice: StateCreator<AppStore, [], [], AuthSlice> = (
     try {
       await authService.logout();
     } catch {
-      // O cookie é HttpOnly; se a chamada falhar, o próximo 401 encerra a
-      // sessão no servidor. O estado local é limpo de qualquer forma.
+      // Cookies são HttpOnly; se a revogação falhar, o refresh expira
+      // sozinho. O estado local é limpo de qualquer forma.
     } finally {
       get().clearSession();
     }

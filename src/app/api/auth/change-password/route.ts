@@ -1,4 +1,3 @@
-import { cookies } from "next/headers";
 import { z } from "zod";
 
 import { clearSessionCookies } from "@/lib/auth/cookies";
@@ -6,6 +5,7 @@ import { SESSION_COOKIE } from "@/lib/auth/constants";
 import { decodeAccessToken, isAccessTokenFresh } from "@/lib/auth/jwt";
 import { backendFetch } from "@/lib/server/backend";
 import { isSameOriginRequest, jsonError } from "@/lib/server/http";
+import { cookies } from "next/headers";
 
 const MAX_BODY_BYTES = 16 * 1024;
 
@@ -93,7 +93,10 @@ export async function POST(request: Request): Promise<Response> {
         Authorization: `Bearer ${token}`,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify(parsed.data),
+      body: JSON.stringify({
+        currentPassword: parsed.data.currentPassword,
+        newPassword: parsed.data.newPassword,
+      }),
       signal: request.signal,
     });
 
@@ -103,6 +106,13 @@ export async function POST(request: Request): Promise<Response> {
       if (response.status === 401) {
         await clearSessionCookies();
         return jsonError(401, "Sessão não encontrada ou expirada.");
+      }
+
+      if (response.status === 429) {
+        return jsonError(
+          429,
+          "Muitas tentativas. Aguarde alguns minutos e tente novamente.",
+        );
       }
 
       if (response.status === 400) {
@@ -119,10 +129,15 @@ export async function POST(request: Request): Promise<Response> {
       );
     }
 
+    // O backend revoga todos os refresh tokens do usuário após trocar a
+    // senha: encerramos a sessão local e pedimos novo login.
+    await clearSessionCookies();
+
     return Response.json(
       {
         message:
-          extractBackendMessage(payload) ?? "Senha alterada com sucesso.",
+          extractBackendMessage(payload) ??
+          "Senha alterada com sucesso. Faça login novamente.",
       },
       { headers: { "Cache-Control": "no-store" } },
     );
