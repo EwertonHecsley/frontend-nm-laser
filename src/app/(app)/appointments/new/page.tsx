@@ -58,7 +58,7 @@ export default async function NewAppointmentPage({
         mode="create"
         initialPatientId={initialPatientId}
         currentUserId={user.id}
-        currentUserEmail={user.email}
+        currentUserEmail={user.name}
       />
     </div>
   );
