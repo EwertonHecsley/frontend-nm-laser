@@ -15,6 +15,7 @@ export interface Appointment extends AuditFields {
   patientId: string;
   cityId: string;
   professionalId: string | null;
+  professionalName?: string | null;
   scheduledAt: string;
   status: AppointmentStatus;
 }

@@ -72,5 +72,5 @@ export function hasPermission(
     return false;
   }
 
-  return ROLE_PERMISSIONS[role].includes(permission);
+  return ROLE_PERMISSIONS[role]?.includes(permission) ?? false;
 }

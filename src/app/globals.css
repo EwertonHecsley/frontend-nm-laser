@@ -92,6 +92,10 @@
     @apply min-h-dvh bg-background text-foreground antialiased;
   }
 
+  button:not(:disabled) {
+    cursor: pointer;
+  }
+
   ::selection {
     background-color: color-mix(in srgb, var(--brand) 20%, transparent);
   }

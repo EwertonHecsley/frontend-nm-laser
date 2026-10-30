@@ -129,10 +129,16 @@ async function executeRequest<T>(
     : await response.text().catch(() => null);
 
   if (!response.ok) {
-    if (response.status === 401 && typeof window !== "undefined") {
-      window.dispatchEvent(new CustomEvent("nm:unauthorized", {
-        detail: { canRefresh: !AUTH_PATHS.some((path) => url.includes(path)) },
-      }));
+    if (response.status === 401 && isLoginRequest) {
+      throw new ApiError("E-mail ou senha inválidos.", 401, payload);
+    }
+
+    if (
+      response.status === 401 &&
+      !isLoginRequest &&
+      typeof window !== "undefined"
+    ) {
+      window.dispatchEvent(new Event("nm:unauthorized"));
     }
 
     throw normalizeApiError(response.status, payload);
