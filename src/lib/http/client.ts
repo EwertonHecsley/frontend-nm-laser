@@ -16,8 +16,9 @@ export interface RequestOptions
 const DEFAULT_TIMEOUT_MS = 20_000;
 
 /** Caminhos de autenticação que não devem tentar renovação em loop. */
+const LOGIN_PATH = "/api/auth/login";
 const AUTH_PATHS = [
-  "/api/auth/login",
+  LOGIN_PATH,
   "/api/auth/refresh",
   "/api/auth/logout",
 ];
@@ -43,7 +44,7 @@ function startRefresh(): Promise<boolean> {
   return refreshInFlight;
 }
 
-function buildQueryString(query?: QueryParams): string {
+export function buildQueryString(query?: QueryParams): string {
   if (!query) {
     return "";
   }
@@ -80,6 +81,8 @@ async function executeRequest<T>(
   url: string,
   options: RequestOptions,
 ): Promise<T> {
+  const isLoginRequest =
+    new URL(url, "http://localhost").pathname === LOGIN_PATH;
   const { body, headers: customHeaders, timeoutMs, ...init } = options;
   const headers = new Headers(customHeaders);
 
