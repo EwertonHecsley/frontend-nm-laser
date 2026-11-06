@@ -85,7 +85,7 @@ async function executeRequest<T>(
   url: string,
   options: RequestOptions,
 ): Promise<T> {
-  const isLoginRequest =
+  const isLoginRequestPath =
     new URL(url, "http://localhost").pathname === LOGIN_PATH;
   const { body, headers: customHeaders, timeoutMs, ...init } = options;
   const headers = new Headers(customHeaders);
@@ -144,7 +144,7 @@ async function executeRequest<T>(
 
     if (
       response.status === 401 &&
-      !loginRequest &&
+      !isLoginRequestPath &&
       typeof window !== "undefined"
     ) {
       window.dispatchEvent(new Event("nm:unauthorized"));
