@@ -88,19 +88,19 @@ export function SessionGroupCard({ group }: { group: SessionGroupSummary }) {
               icon={CircleCheck}
               label="Concluídas"
               value={group.completed}
-              tone="bg-emerald-600/10 text-emerald-700"
+              tone="bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300"
             />
             <GroupMetric
               icon={Clock}
               label="Em andamento"
               value={group.inProgress}
-              tone="bg-amber-500/10 text-amber-700"
+              tone="bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300"
             />
             <GroupMetric
               icon={CircleX}
               label="Canceladas"
               value={group.cancelled}
-              tone="bg-rose-600/10 text-rose-700"
+              tone="bg-rose-100 text-rose-700 dark:bg-rose-500/15 dark:text-rose-300"
             />
           </div>
 
@@ -117,7 +117,7 @@ export function SessionGroupCard({ group }: { group: SessionGroupSummary }) {
             </div>
             <div className="h-2 overflow-hidden rounded-full bg-muted">
               <div
-                className="h-full rounded-full bg-emerald-600"
+                className="h-full rounded-full bg-linear-to-r from-primary to-emerald-500 transition-[width] duration-300 ease-out"
                 style={{ width: `${completionRate}%` }}
               />
             </div>

@@ -43,7 +43,7 @@ function startRefresh(): Promise<boolean> {
   return refreshInFlight;
 }
 
-function buildQueryString(query?: QueryParams): string {
+export function buildQueryString(query?: QueryParams): string {
   if (!query) {
     return "";
   }
@@ -73,6 +73,10 @@ function createSignal(options: RequestOptions): AbortSignal {
   );
 
   return options.signal ? AbortSignal.any([options.signal, timeout]) : timeout;
+}
+
+function isLoginRequest(url: string): boolean {
+  return url.includes("/auth/login");
 }
 
 async function executeRequest<T>(
@@ -129,13 +133,15 @@ async function executeRequest<T>(
     : await response.text().catch(() => null);
 
   if (!response.ok) {
-    if (response.status === 401 && isLoginRequest) {
+    const loginRequest = isLoginRequest(url);
+
+    if (response.status === 401 && loginRequest) {
       throw new ApiError("E-mail ou senha inválidos.", 401, payload);
     }
 
     if (
       response.status === 401 &&
-      !isLoginRequest &&
+      !loginRequest &&
       typeof window !== "undefined"
     ) {
       window.dispatchEvent(new Event("nm:unauthorized"));
@@ -165,7 +171,7 @@ async function request<T>(
 
     // Interceptor de renovação: um 401 em rota protegida dispara uma
     // única tentativa de renovar o access token via cookie de refresh.
-    // Em caso de sucesso, a requisição original é reenviada.
+    // O lock de refresh previne múltiplas renovações simultâneas.
     if (
       error instanceof ApiError &&
       error.status === 401 &&
@@ -173,7 +179,15 @@ async function request<T>(
       !options.signal?.aborted &&
       typeof window !== "undefined"
     ) {
-      const refreshed = await startRefresh();
+      // Se já houver um refresh em andamento, aguardamos esse resultado
+      // em vez de disparar um novo. Isso previne race condition e
+      // múltiplos refreshes simultâneos.
+      let refreshed = false;
+      if (refreshInFlight) {
+        refreshed = await refreshInFlight;
+      } else {
+        refreshed = await startRefresh();
+      }
 
       if (refreshed) {
         return executeRequest<T>(method, url, options);

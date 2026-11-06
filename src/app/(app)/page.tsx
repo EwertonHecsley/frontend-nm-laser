@@ -77,21 +77,27 @@ export default async function DashboardPage() {
   return (
     <div className="space-y-8">
       <section className="overflow-hidden rounded-2xl border bg-card shadow-sm">
-        <div className="relative bg-linear-to-br from-[#155e63] via-[#0f766e] to-[#115e59] p-6 text-white md:p-8">
+        <div
+          className="relative p-6 text-white md:p-8"
+          style={{
+            backgroundImage:
+              "linear-gradient(135deg, #9d174d 0%, #be185d 45%, #ec4899 100%)",
+          }}
+        >
           <div
             className="pointer-events-none absolute -right-16 -top-20 size-64 rounded-full bg-white/10 blur-2xl"
             aria-hidden="true"
           />
           <div className="relative max-w-2xl space-y-3">
             <p className="text-sm text-white/75">Painel operacional</p>
-            <h1 className="text-2xl font-semibold tracking-tight md:text-3xl">
+            <h1 className="font-heading text-2xl font-semibold tracking-tight md:text-3xl">
               Olá, {user.name}
             </h1>
             <p className="max-w-xl text-sm leading-relaxed text-white/85 md:text-base">
               {ROLE_ABILITIES[user.role]}
             </p>
             <div className="flex flex-wrap items-center gap-2 pt-2">
-              <Badge className="border-white/20 bg-white/15 text-white">
+              <Badge className="border-accent bg-accent/20 text-accent-foreground">
                 {getRoleLabel(user.role)}
               </Badge>
               <span className="text-xs text-white/70">{user.name}</span>
@@ -123,7 +129,7 @@ export default async function DashboardPage() {
                 <Card className="h-full transition-colors group-hover:border-primary/30 group-hover:bg-accent/40">
                   <CardHeader>
                     <div className="flex items-center justify-between gap-2">
-                      <span className="grid size-10 place-items-center rounded-lg bg-secondary text-secondary-foreground">
+                      <span className="grid size-10 place-items-center rounded-xl bg-accent text-accent-foreground shadow-sm">
                         <Icon className="size-5" aria-hidden="true" />
                       </span>
                       <Badge>Disponível</Badge>

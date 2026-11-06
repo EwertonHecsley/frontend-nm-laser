@@ -51,10 +51,10 @@ function SummaryCard({
   tone?: "default" | "waiting" | "progress" | "pending";
 }) {
   const tones: Record<typeof tone, string> = {
-    default: "bg-secondary text-secondary-foreground",
-    waiting: "bg-amber-500/10 text-amber-700",
-    progress: "bg-sky-600/10 text-sky-700",
-    pending: "bg-emerald-600/10 text-emerald-700",
+    default: "bg-accent text-accent-foreground",
+    waiting: "bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300",
+    progress: "bg-violet-100 text-violet-700 dark:bg-violet-500/15 dark:text-violet-300",
+    pending: "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300",
   };
 
   return (
@@ -65,7 +65,7 @@ function SummaryCard({
           <CardTitle className="text-2xl tabular-nums">{value}</CardTitle>
         </div>
         <span
-          className={`grid size-10 place-items-center rounded-lg ${tones[tone]}`}
+          className={`grid size-10 place-items-center rounded-xl shadow-sm ${tones[tone]}`}
         >
           <Icon className="size-5" aria-hidden="true" />
         </span>

@@ -56,19 +56,19 @@ function GroupStats({
       label: "Concluídas",
       value: completed,
       icon: CircleCheck,
-      tone: "bg-emerald-600/10 text-emerald-700",
+      tone: "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300",
     },
     {
       label: "Em andamento",
       value: inProgress,
       icon: Clock,
-      tone: "bg-amber-500/10 text-amber-700",
+      tone: "bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300",
     },
     {
       label: "Canceladas",
       value: cancelled,
       icon: CircleX,
-      tone: "bg-rose-600/10 text-rose-700",
+      tone: "bg-rose-100 text-rose-700 dark:bg-rose-500/15 dark:text-rose-300",
     },
   ];
 
@@ -81,7 +81,7 @@ function GroupStats({
               <CardDescription>{label}</CardDescription>
               <CardTitle className="text-2xl tabular-nums">{value}</CardTitle>
             </div>
-            <span className={`grid size-10 place-items-center rounded-lg ${tone}`}>
+            <span className={`grid size-10 place-items-center rounded-xl shadow-sm ${tone}`}>
               <Icon className="size-5" aria-hidden="true" />
             </span>
           </CardHeader>

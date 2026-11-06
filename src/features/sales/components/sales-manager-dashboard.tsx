@@ -101,7 +101,7 @@ function MetricCard({
           <CardDescription>{label}</CardDescription>
           <CardTitle className="text-2xl tabular-nums">{value}</CardTitle>
         </div>
-        <span className="grid size-10 place-items-center rounded-lg bg-secondary text-secondary-foreground">
+        <span className="grid size-10 place-items-center rounded-xl bg-accent text-accent-foreground shadow-sm">
           <Icon className="size-5" aria-hidden="true" />
         </span>
       </CardHeader>

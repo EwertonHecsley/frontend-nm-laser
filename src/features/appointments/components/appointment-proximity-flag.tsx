@@ -16,11 +16,11 @@ const PROXIMITY_LABELS: Record<AppointmentProximity, string> = {
 
 const PROXIMITY_CLASSES: Record<AppointmentProximity, string> = {
   normal:
-    "border-blue-600/20 bg-blue-600/10 text-blue-700 dark:text-blue-300",
+    "border-primary/30 bg-primary/10 text-primary dark:text-pink-300",
   tomorrow:
-    "border-amber-500/30 bg-amber-500/15 text-amber-700 dark:text-amber-300",
+    "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-300",
   today:
-    "border-red-600/20 bg-red-600/10 text-red-700 dark:text-red-300",
+    "border-rose-500/30 bg-rose-500/10 text-rose-700 dark:text-rose-300",
 };
 
 export function AppointmentProximityBadge({

@@ -1078,7 +1078,7 @@ export function AppointmentsView({
                               <Button
                                 type="button"
                                 size="sm"
-                                className="gap-1.5 bg-emerald-600 text-white hover:bg-emerald-700"
+                                className="gap-1.5 bg-emerald-600 text-white hover:bg-emerald-500"
                                 asChild
                               >
                                 <a

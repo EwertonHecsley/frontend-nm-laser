@@ -25,6 +25,7 @@ import { useState } from "react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { ThemeToggle } from "@/components/providers/theme-toggle";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -236,15 +237,30 @@ function NavLink({
       onClick={onNavigate}
       aria-current={active ? "page" : undefined}
       className={cn(
-        "group flex min-h-10 items-center gap-3 rounded-lg px-3 text-sm font-medium transition-colors",
+        "group relative flex min-h-10 items-center gap-3 rounded-lg px-3 text-sm font-medium transition-colors duration-150",
         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
         active
-          ? "bg-sidebar-accent text-sidebar-accent-foreground"
+          ? "bg-sidebar-accent font-semibold text-sidebar-accent-foreground shadow-[inset_0_1px_0_rgb(255_255_255/0.6)]"
           : "text-muted-foreground hover:bg-muted hover:text-foreground",
         collapsed && "justify-center px-0",
       )}
     >
-      <Icon className="size-5 shrink-0" aria-hidden="true" />
+      <span
+        aria-hidden="true"
+        className={cn(
+          "absolute left-0 top-1/2 h-5 w-1 -translate-y-1/2 rounded-r-full bg-primary transition-opacity duration-150",
+          active ? "opacity-100" : "opacity-0",
+        )}
+      />
+      <Icon
+        className={cn(
+          "size-5 shrink-0 transition-colors duration-150",
+          active
+            ? "text-primary"
+            : "text-muted-foreground/70 group-hover:text-primary/70",
+        )}
+        aria-hidden="true"
+      />
       {!collapsed && <span className="truncate">{item.label}</span>}
     </Link>
   );
@@ -286,12 +302,18 @@ function SidebarContent({
           onClick={onNavigate}
           className="flex min-w-0 items-center gap-3 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
-          <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-primary text-primary-foreground shadow-sm">
+          <span
+            className="grid size-9 shrink-0 place-items-center rounded-xl text-white shadow-sm shadow-primary/30 transition-transform duration-200 hover:scale-105"
+            style={{
+              backgroundImage:
+                "linear-gradient(135deg, #ec4899 0%, #db2777 100%)",
+            }}
+          >
             <Sparkles className="size-5" aria-hidden="true" />
           </span>
           {!collapsed && (
-            <span className="min-w-0">
-              <span className="block truncate text-sm font-semibold tracking-tight">
+            <span className="min-w-0 leading-tight">
+              <span className="block truncate font-heading text-lg font-semibold tracking-tight">
                 NM Laser
               </span>
               <span className="block truncate text-xs text-muted-foreground">
@@ -334,7 +356,7 @@ function SidebarContent({
       >
         <div className="space-y-1">
           {!collapsed && (
-            <p className="px-3 pb-1 text-xs font-medium tracking-wide text-muted-foreground">
+            <p className="px-3 pb-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/70">
               Operação
             </p>
           )}
@@ -543,9 +565,11 @@ export function AppShell({
             <Menu className="size-5" />
           </Button>
 
-          <p className="min-w-0 flex-1 truncate text-sm font-medium text-muted-foreground">
+          <p className="min-w-0 flex-1 truncate font-heading text-base font-semibold tracking-tight text-foreground">
             {getPageTitle(pathname)}
           </p>
+
+          <ThemeToggle />
 
           <UserMenu
             user={user}
@@ -555,7 +579,7 @@ export function AppShell({
         </header>
 
         <main className="flex-1 px-4 py-6 md:px-8 md:py-8">
-          <div className="mx-auto w-full max-w-6xl">{children}</div>
+          <div className="mx-auto w-full max-w-7xl">{children}</div>
         </main>
       </div>
     </div>
