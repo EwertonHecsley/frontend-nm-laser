@@ -139,7 +139,7 @@ async function executeRequest<T>(
     const loginRequest = isLoginRequest(url);
 
     if (response.status === 401 && loginRequest) {
-      throw new ApiError("E-mail ou senha inválidos.", 401, payload);
+      throw new ApiError("E-mail ou senha inválidos.", 401, payload as unknown);
     }
 
     if (
