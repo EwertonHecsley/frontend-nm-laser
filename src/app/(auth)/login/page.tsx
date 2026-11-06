@@ -2,9 +2,9 @@ import type { Metadata } from "next";
 import {
   CalendarDays,
   ShieldCheck,
-  Sparkles,
   Users,
 } from "lucide-react";
+import Image from "next/image";
 
 import { LoginForm } from "@/features/auth/components/login-form";
 
@@ -58,15 +58,15 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
           aria-hidden="true"
         />
         <div className="relative flex items-center gap-3">
-          <span className="grid size-11 place-items-center rounded-xl bg-white/15 shadow-sm ring-1 ring-white/25">
-            <Sparkles className="size-6" aria-hidden="true" />
-          </span>
-          <div>
-            <p className="font-heading text-xl font-semibold tracking-tight">
-              NM Laser
-            </p>
-            <p className="text-sm text-white/70">CRM clínico</p>
-          </div>
+          <Image
+            src="/NM-logo.png"
+            alt="NM Laser"
+            width={1536}
+            height={1024}
+            className="h-16 w-24 shrink-0 rounded-md object-cover"
+            priority
+          />
+          <p className="text-sm text-white/70">CRM clínico</p>
         </div>
 
         <div className="relative max-w-md space-y-6">
@@ -116,21 +116,15 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
         />
         <div className="w-full max-w-sm space-y-8">
           <div className="flex items-center gap-3 lg:hidden">
-            <span
-              className="grid size-10 place-items-center rounded-xl text-white shadow-sm shadow-primary/30"
-              style={{
-                backgroundImage:
-                  "linear-gradient(135deg, #ec4899 0%, #db2777 100%)",
-              }}
-            >
-              <Sparkles className="size-5" aria-hidden="true" />
-            </span>
-            <div>
-              <p className="font-heading text-lg font-semibold tracking-tight">
-                NM Laser
-              </p>
-              <p className="text-xs text-muted-foreground">CRM clínico</p>
-            </div>
+            <Image
+              src="/NM-logo.png"
+              alt="NM Laser"
+              width={1536}
+              height={1024}
+              className="h-12 w-[4.5rem] shrink-0 rounded-md object-cover"
+              priority
+            />
+            <p className="text-xs text-muted-foreground">CRM clínico</p>
           </div>
 
           <div className="space-y-2">

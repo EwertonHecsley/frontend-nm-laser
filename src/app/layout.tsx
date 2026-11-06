@@ -38,34 +38,11 @@ export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="pt-BR" className={`${inter.variable} h-full`}>
-      <head>
-        {/* Sincroniza o tema salvo no localStorage antes da hidratação do React
-           para evitar flash de tema incorreto (FOUC) e mismatch de hidratação
-           entre servidor e cliente com next-themes (attribute="class"). */}
-        <script
-          id="theme-sync"
-          dangerouslySetInnerHTML={{
-            __html: `
-              (function() {
-                try {
-                  var theme = localStorage.getItem('theme');
-                  var root = document.documentElement;
-                  if (theme === 'dark') {
-                    root.classList.add('dark');
-                    root.classList.remove('light');
-                  } else {
-                    root.classList.add('light');
-                    root.classList.remove('dark');
-                  }
-                } catch (e) {
-                  // localStorage indisponível (ex.: modo privado); mantém o padrão.
-                }
-              })();
-            `,
-          }}
-        />
-      </head>
+    <html
+      lang="pt-BR"
+      className={`${inter.variable} h-full`}
+      suppressHydrationWarning
+    >
       <body className="min-h-full">
         <AppProviders>{children}</AppProviders>
       </body>

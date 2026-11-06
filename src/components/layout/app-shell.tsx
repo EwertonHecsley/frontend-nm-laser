@@ -13,11 +13,11 @@ import {
   PanelLeftOpen,
   ScanLine,
   Settings,
-  Sparkles,
   Users,
   UsersRound,
   type LucideIcon,
 } from "lucide-react";
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
@@ -302,20 +302,18 @@ function SidebarContent({
           onClick={onNavigate}
           className="flex min-w-0 items-center gap-3 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
-          <span
-            className="grid size-9 shrink-0 place-items-center rounded-xl text-white shadow-sm shadow-primary/30 transition-transform duration-200 hover:scale-105"
-            style={{
-              backgroundImage:
-                "linear-gradient(135deg, #ec4899 0%, #db2777 100%)",
-            }}
-          >
-            <Sparkles className="size-5" aria-hidden="true" />
-          </span>
+          <Image
+            src="/NM-logo.png"
+            alt="NM Laser"
+            width={1536}
+            height={1024}
+            className={cn(
+              "h-8 w-12 shrink-0 rounded-md object-cover transition-transform duration-200 hover:scale-105",
+              collapsed && "h-6 w-9",
+            )}
+          />
           {!collapsed && (
             <span className="min-w-0 leading-tight">
-              <span className="block truncate font-heading text-lg font-semibold tracking-tight">
-                NM Laser
-              </span>
               <span className="block truncate text-xs text-muted-foreground">
                 CRM clínico
               </span>
