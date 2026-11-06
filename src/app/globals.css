@@ -45,37 +45,74 @@
 }
 
 :root {
-  --background: #f3f6f8;
-  --foreground: #17212b;
+  --background: #fdf6f9;
+  --foreground: #3f1b30;
   --card: #ffffff;
-  --card-foreground: #17212b;
+  --card-foreground: #3f1b30;
   --popover: #ffffff;
-  --popover-foreground: #17212b;
-  --primary: #155e63;
+  --popover-foreground: #3f1b30;
+  --primary: #db2777;
   --primary-foreground: #ffffff;
-  --secondary: #e6f4f1;
-  --secondary-foreground: #155e63;
-  --muted: #eef3f5;
-  --muted-foreground: #465462;
-  --accent: #f0fdfa;
-  --accent-foreground: #155e63;
-  --destructive: #b42318;
-  --border: #dce3e8;
-  --input: #dce3e8;
-  --ring: #2563eb;
-  --brand: #155e63;
-  --brand-soft: #f0fdfa;
-  --success: #166534;
-  --warning: #92400e;
-  --radius: 0.5rem;
+  --secondary: #fce7f3;
+  --secondary-foreground: #be185d;
+  --muted: #f6eef2;
+  --muted-foreground: #475569;
+  --accent: #fdf2f8;
+  --accent-foreground: #9d174d;
+  --destructive: #dc2626;
+  --border: #f3d5e5;
+  --input: #e9c7da;
+  --ring: #db2777;
+  --brand: #db2777;
+  --brand-soft: #fdf2f8;
+  --success: #15803d;
+  --warning: #b45309;
+  --radius: 0.625rem;
   --sidebar: #ffffff;
-  --sidebar-foreground: #17212b;
-  --sidebar-primary: #155e63;
+  --sidebar-foreground: #3f1b30;
+  --sidebar-primary: #db2777;
   --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: #f0fdfa;
-  --sidebar-accent-foreground: #155e63;
-  --sidebar-border: #dce3e8;
-  --sidebar-ring: #2563eb;
+  --sidebar-accent: #fdf2f8;
+  --sidebar-accent-foreground: #9d174d;
+  --sidebar-border: #f3d5e5;
+  --sidebar-ring: #db2777;
+}
+
+/*
+ * Modo escuro — paleta "beauty dark": tons profundos com base quente
+ * rosada, mantendo o primario rosa como identidade da marca.
+ */
+.dark {
+  --background: #1a1216;
+  --foreground: #f9e8f1;
+  --card: #241a1f;
+  --card-foreground: #f9e8f1;
+  --popover: #241a1f;
+  --popover-foreground: #f9e8f1;
+  --primary: #ec4899;
+  --primary-foreground: #ffffff;
+  --secondary: #3a1f2e;
+  --secondary-foreground: #f9a8d4;
+  --muted: #2e2228;
+  --muted-foreground: #c4a8b8;
+  --accent: #33222b;
+  --accent-foreground: #fbcfe8;
+  --destructive: #f87171;
+  --border: rgba(236, 72, 153, 0.18);
+  --input: rgba(236, 72, 153, 0.24);
+  --ring: #ec4899;
+  --brand: #ec4899;
+  --brand-soft: #33222b;
+  --success: #4ade80;
+  --warning: #fbbf24;
+  --sidebar: #1f151a;
+  --sidebar-foreground: #f9e8f1;
+  --sidebar-primary: #ec4899;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #33222b;
+  --sidebar-accent-foreground: #fbcfe8;
+  --sidebar-border: rgba(236, 72, 153, 0.16);
+  --sidebar-ring: #ec4899;
 }
 
 @layer base {
@@ -98,5 +135,36 @@
 
   ::selection {
     background-color: color-mix(in srgb, var(--brand) 20%, transparent);
+  }
+
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background-color: color-mix(in srgb, var(--brand) 24%, transparent);
+    border-radius: 999px;
+    border: 2px solid transparent;
+    background-clip: content-box;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background-color: color-mix(in srgb, var(--brand) 40%, transparent);
+  }
+
+  ::-webkit-scrollbar-track {
+    background-color: transparent;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
   }
 }

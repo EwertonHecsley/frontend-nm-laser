@@ -262,7 +262,7 @@ export function SignatureField({
 
       <div
         className={cn(
-          "rounded-xl border bg-white p-2",
+          "rounded-xl border bg-background p-2",
           disabled && "opacity-60",
         )}
       >
@@ -271,7 +271,7 @@ export function SignatureField({
             ref={canvasRef}
             id={id}
             aria-label="Área para assinatura com caneta, mouse ou toque"
-            className="h-44 w-full touch-none rounded-lg bg-white"
+            className="h-44 w-full touch-none rounded-lg bg-background"
           />
         </div>
 
@@ -305,10 +305,10 @@ export function SignatureField({
             <img
               src={preview}
               alt="Prévia da assinatura"
-              className="h-24 w-full max-w-md rounded-lg border bg-white object-contain p-2"
+              className="h-24 w-full max-w-md rounded-lg border bg-background object-contain p-2"
             />
           ) : (
-            <p className="whitespace-pre-wrap break-all rounded-lg border bg-white px-3 py-2 text-sm text-muted-foreground">
+            <p className="whitespace-pre-wrap break-all rounded-lg border bg-background px-3 py-2 text-sm text-muted-foreground">
               {preview}
             </p>
           )

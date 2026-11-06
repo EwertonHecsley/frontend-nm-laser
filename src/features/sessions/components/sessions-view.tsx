@@ -79,11 +79,11 @@ function MetricCard({
   onClick?: () => void;
 }) {
   const tones: Record<typeof tone, string> = {
-    default: "bg-secondary text-secondary-foreground",
-    completed: "bg-emerald-600/10 text-emerald-700",
-    progress: "bg-amber-500/10 text-amber-700",
-    cancelled: "bg-rose-600/10 text-rose-700",
-    patients: "bg-sky-600/10 text-sky-700",
+    default: "bg-accent text-accent-foreground",
+    completed: "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300",
+    progress: "bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300",
+    cancelled: "bg-rose-100 text-rose-700 dark:bg-rose-500/15 dark:text-rose-300",
+    patients: "bg-violet-100 text-violet-700 dark:bg-violet-500/15 dark:text-violet-300",
   };
 
   return (
@@ -116,7 +116,7 @@ function MetricCard({
         </div>
         <span
           className={cn(
-            "grid size-10 place-items-center rounded-lg",
+            "grid size-10 place-items-center rounded-xl shadow-sm",
             tones[tone],
           )}
         >
@@ -155,19 +155,19 @@ function StatusDistribution({ stats }: { stats: SessionOverviewStats }) {
     {
       key: "completed",
       label: "Concluídas",
-      color: "bg-emerald-600",
+      color: "bg-emerald-500",
       count: stats.completed,
     },
     {
       key: "in_progress",
       label: "Em andamento",
-      color: "bg-amber-500",
+      color: "bg-amber-400",
       count: stats.inProgress,
     },
     {
       key: "cancelled",
       label: "Canceladas",
-      color: "bg-rose-600",
+      color: "bg-rose-500",
       count: stats.cancelled,
     },
   ];

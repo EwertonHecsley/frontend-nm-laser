@@ -9,7 +9,17 @@ import {
   RefreshCw,
   Users,
 } from "lucide-react";
+import Link from "next/link";
 import { useMemo, useState } from "react";
+import {
+  Bar,
+  BarChart,
+  CartesianGrid,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from "recharts";
 
 import { PageHeader } from "@/components/layout/page-header";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -29,7 +39,6 @@ import { formatCurrency } from "@/lib/format/currency";
 import { toEndOfDayIso, toStartOfDayIso } from "@/lib/format/date";
 import { reportsService } from "@/services/reports.service";
 import { salesService } from "@/services/sales.service";
-import Link from "next/link";
 import type { Appointment, AppointmentStatus } from "@/types";
 
 const STATUS_ITEMS: Array<{
@@ -37,12 +46,12 @@ const STATUS_ITEMS: Array<{
   label: string;
   color: string;
 }> = [
-  { status: "performed", label: "Realizados", color: "bg-emerald-600" },
-  { status: "scheduled", label: "Agendados", color: "bg-sky-600" },
-  { status: "missed", label: "Faltas", color: "bg-rose-600" },
-  { status: "cancelled", label: "Cancelados", color: "bg-slate-500" },
-  { status: "arrived", label: "Chegaram", color: "bg-violet-600" },
-  { status: "rescheduled", label: "Remarcados", color: "bg-amber-500" },
+  { status: "performed", label: "Realizados", color: "bg-emerald-500" },
+  { status: "scheduled", label: "Agendados", color: "bg-violet-500" },
+  { status: "missed", label: "Faltas", color: "bg-rose-500" },
+  { status: "cancelled", label: "Cancelados", color: "bg-slate-400" },
+  { status: "arrived", label: "Chegaram", color: "bg-violet-500" },
+  { status: "rescheduled", label: "Remarcados", color: "bg-amber-400" },
 ];
 
 function getDateInputValue(date: Date): string {
@@ -143,20 +152,24 @@ function MetricCard({
   value,
   detail,
   icon: Icon,
+  iconClassName = "bg-accent text-accent-foreground",
 }: {
   label: string;
   value: number;
   detail?: string;
   icon: typeof Users;
+  iconClassName?: string;
 }) {
   return (
-    <Card>
+    <Card className="transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md hover:shadow-primary/10">
       <CardHeader className="flex-row items-start justify-between gap-3">
         <div className="space-y-1">
           <CardDescription>{label}</CardDescription>
           <CardTitle className="text-2xl tabular-nums">{value}</CardTitle>
         </div>
-        <span className="grid size-10 place-items-center rounded-lg bg-secondary text-secondary-foreground">
+        <span
+          className={`grid size-10 place-items-center rounded-xl shadow-sm ${iconClassName}`}
+        >
           <Icon className="size-5" aria-hidden="true" />
         </span>
       </CardHeader>
@@ -166,6 +179,32 @@ function MetricCard({
         </CardContent>
       )}
     </Card>
+  );
+}
+
+type FlowPoint = { label: string; count: number };
+
+function FlowTooltip({
+  active,
+  payload,
+}: {
+  active?: boolean;
+  payload?: Array<{ payload?: FlowPoint }>;
+}) {
+  const entry = payload?.[0]?.payload;
+
+  if (!active || !entry) {
+    return null;
+  }
+
+  const countLabel =
+    entry.count === 1 ? "1 agendamento" : `${entry.count} agendamentos`;
+
+  return (
+    <div className="rounded-xl border border-border bg-popover px-3 py-2 text-popover-foreground shadow-lg">
+      <p className="text-xs text-muted-foreground">{entry.label}</p>
+      <p className="text-sm font-semibold text-foreground">{countLabel}</p>
+    </div>
   );
 }
 
@@ -179,7 +218,6 @@ function AppointmentFlowChart({
   to: string;
 }) {
   const flow = buildAppointmentFlow(appointments, from, to);
-  const maxCount = Math.max(1, ...flow.map(({ count }) => count));
   const intervalLabel =
     flow.length > 0 &&
     (new Date(`${to}T00:00:00`).getTime() -
@@ -203,33 +241,56 @@ function AppointmentFlowChart({
             Selecione um período válido para visualizar o gráfico.
           </p>
         ) : (
-          <div
-            className="flex min-h-44 items-end gap-1 overflow-x-auto pb-1"
-            role="img"
-            aria-label={`Fluxo de agendamentos por ${intervalLabel}`}
-          >
-            {flow.map(({ label, count }, index) => (
-              <div
-                key={`${label}-${index}`}
-                className="flex min-w-8 flex-1 flex-col items-center justify-end gap-2"
-                title={`${label}: ${count} agendamentos`}
-              >
-                <span className="text-[10px] tabular-nums text-muted-foreground">
-                  {count || ""}
-                </span>
-                <div className="flex h-32 w-full items-end rounded-t bg-muted/60">
-                  <div
-                    className="w-full rounded-t bg-primary transition-[height]"
-                    style={{
-                      height: `${Math.max(3, (count / maxCount) * 100)}%`,
-                    }}
-                  />
-                </div>
-                <span className="whitespace-nowrap text-[10px] text-muted-foreground">
-                  {label}
-                </span>
-              </div>
-            ))}
+          <div>
+            <p className="sr-only">
+              Fluxo de agendamentos por {intervalLabel}:{" "}
+              {flow
+                .map(({ label, count }) => `${label}: ${count}`)
+                .join(", ")}
+            </p>
+            <ResponsiveContainer width="100%" height={280}>
+              <BarChart data={flow} margin={{ top: 8, right: 0, left: 0, bottom: 0 }}>
+                <defs>
+                  <linearGradient id="flowBarGradient" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="var(--color-primary)" stopOpacity={0.85} />
+                    <stop offset="100%" stopColor="var(--color-primary)" stopOpacity={0.45} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid
+                  strokeDasharray="4 4"
+                  stroke="var(--color-border)"
+                  vertical={false}
+                />
+                <XAxis
+                  dataKey="label"
+                  tick={{ fontSize: 11, fill: "var(--color-muted-foreground)" }}
+                  tickLine={false}
+                  axisLine={false}
+                  interval="preserveStartEnd"
+                />
+                <YAxis
+                  width={40}
+                  orientation="right"
+                  allowDecimals={false}
+                  tick={{ fontSize: 11, fill: "var(--color-muted-foreground)" }}
+                  tickLine={false}
+                  axisLine={false}
+                  tickFormatter={(value: number) =>
+                    value >= 1000 ? `${(value / 1000).toFixed(1)}k` : String(value)
+                  }
+                />
+                <Tooltip
+                  cursor={{ fill: "var(--color-muted)", opacity: 0.5 }}
+                  content={<FlowTooltip />}
+                />
+                <Bar
+                  dataKey="count"
+                  fill="url(#flowBarGradient)"
+                  radius={[6, 6, 0, 0]}
+                  maxBarSize={48}
+                />
+              </BarChart>
+            </ResponsiveContainer>
           </div>
         )}
       </CardContent>
@@ -324,7 +385,7 @@ export function ManagerDashboard() {
       />
 
       <Link href="/sales" className="block">
-        <Card className="transition-colors hover:border-primary/40">
+        <Card className="transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-md hover:shadow-primary/10">
           <CardHeader className="flex-row items-start justify-between gap-3">
             <div className="space-y-1">
               <CardDescription>Valores a receber</CardDescription>
@@ -335,7 +396,7 @@ export function ManagerDashboard() {
                 })}
               </CardTitle>
             </div>
-            <span className="grid size-10 place-items-center rounded-lg bg-amber-500/10 text-amber-700">
+                  <span className="grid size-10 place-items-center rounded-xl bg-amber-100 text-amber-700 shadow-sm dark:bg-amber-500/15 dark:text-amber-300">
               <CircleDollarSign className="size-5" aria-hidden="true" />
             </span>
           </CardHeader>
@@ -346,7 +407,7 @@ export function ManagerDashboard() {
         </Card>
       </Link>
 
-      <Card>
+      <Card className="transition-all duration-200 hover:shadow-md hover:shadow-primary/10">
         <CardHeader>
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div>
@@ -355,7 +416,9 @@ export function ManagerDashboard() {
                 O intervalo é aplicado aos agendamentos e às sessões concluídas.
               </CardDescription>
             </div>
-            <Badge variant="secondary">Gestora</Badge>
+            <Badge variant="secondary" className="bg-secondary text-secondary-foreground">
+              Gestora
+            </Badge>
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -442,38 +505,45 @@ export function ManagerDashboard() {
                 label="Pacientes cadastrados"
                 value={data.patientCount}
                 icon={Users}
+                iconClassName="bg-accent text-accent-foreground"
               />
               <MetricCard
                 label="Agendamentos no período"
                 value={data.appointments.length}
                 detail="Todos os status"
                 icon={CalendarDays}
+                iconClassName="bg-violet-100 text-violet-700 dark:bg-violet-500/15 dark:text-violet-300"
               />
               <MetricCard
                 label="Realizados"
                 value={statusCounts!.performed}
                 icon={CalendarCheck2}
+                iconClassName="bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300"
               />
               <MetricCard
                 label="Agendamentos agendados"
                 value={statusCounts!.scheduled}
                 icon={CalendarDays}
+                iconClassName="bg-violet-100 text-violet-700 dark:bg-violet-500/15 dark:text-violet-300"
               />
               <MetricCard
                 label="Faltas"
                 value={statusCounts!.missed}
                 icon={CalendarDays}
+                iconClassName="bg-rose-100 text-rose-700 dark:bg-rose-500/15 dark:text-rose-300"
               />
               <MetricCard
                 label="Cancelados"
                 value={statusCounts!.cancelled}
                 icon={CalendarDays}
+                iconClassName="bg-slate-100 text-slate-600 dark:bg-slate-500/15 dark:text-slate-300"
               />
               <MetricCard
                 label="Sessões realizadas"
                 value={data.completedSessionCount}
                 detail="Sessões concluídas no período selecionado"
                 icon={ClipboardCheck}
+                iconClassName="bg-violet-100 text-violet-700 dark:bg-violet-500/15 dark:text-violet-300"
               />
             </div>
           </section>
@@ -500,7 +570,7 @@ export function ManagerDashboard() {
               Faturamento
             </h2>
             <div className="grid gap-4 md:grid-cols-3">
-              <Card>
+              <Card className="transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md hover:shadow-primary/10">
                 <CardHeader className="flex-row items-start justify-between gap-3">
                   <div className="space-y-1">
                     <CardDescription>Faturamento no período</CardDescription>
@@ -508,16 +578,15 @@ export function ManagerDashboard() {
                       {formatCurrency(data.financial.revenue)}
                     </CardTitle>
                   </div>
-                  <CircleDollarSign
-                    className="size-5 text-muted-foreground"
-                    aria-hidden="true"
-                  />
+                  <span className="grid size-10 place-items-center rounded-xl bg-accent text-accent-foreground shadow-sm">
+                    <CircleDollarSign className="size-5" aria-hidden="true" />
+                  </span>
                 </CardHeader>
                 <CardContent className="text-sm text-muted-foreground">
                   Valor das compras lançadas menos os descontos concedidos.
                 </CardContent>
               </Card>
-              <Card>
+              <Card className="transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md hover:shadow-primary/10">
                 <CardHeader className="flex-row items-start justify-between gap-3">
                   <div className="space-y-1">
                     <CardDescription>Compras lançadas</CardDescription>
@@ -525,10 +594,9 @@ export function ManagerDashboard() {
                       {data.financial.salesCount}
                     </CardTitle>
                   </div>
-                  <CircleDollarSign
-                    className="size-5 text-muted-foreground"
-                    aria-hidden="true"
-                  />
+                  <span className="grid size-10 place-items-center rounded-xl bg-violet-100 text-violet-700 shadow-sm dark:bg-violet-500/15 dark:text-violet-300">
+                    <CircleDollarSign className="size-5" aria-hidden="true" />
+                  </span>
                 </CardHeader>
                 <CardContent className="text-sm text-muted-foreground">
                   {data.financial.salesCount === 0
@@ -536,7 +604,7 @@ export function ManagerDashboard() {
                     : `${formatCurrency(data.financial.totalDiscount)} em descontos no período.`}
                 </CardContent>
               </Card>
-              <Card>
+              <Card className="transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md hover:shadow-primary/10">
                 <CardHeader className="flex-row items-start justify-between gap-3">
                   <div className="space-y-1">
                     <CardDescription>Ticket médio</CardDescription>
@@ -544,10 +612,9 @@ export function ManagerDashboard() {
                       {averageTicket ? formatCurrency(averageTicket) : "—"}
                     </CardTitle>
                   </div>
-                  <CircleDollarSign
-                    className="size-5 text-muted-foreground"
-                    aria-hidden="true"
-                  />
+                  <span className="grid size-10 place-items-center rounded-xl bg-violet-100 text-violet-700 shadow-sm dark:bg-violet-500/15 dark:text-violet-300">
+                    <CircleDollarSign className="size-5" aria-hidden="true" />
+                  </span>
                 </CardHeader>
                 <CardContent className="text-sm text-muted-foreground">
                   Faturamento dividido pela quantidade de compras.

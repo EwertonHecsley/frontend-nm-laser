@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useRef } from "react";
 
+import { ThemeProvider } from "@/components/providers/theme-provider";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useAppStore } from "@/store";
@@ -51,9 +52,11 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
   }, [router]);
 
   return (
-    <TooltipProvider delayDuration={200}>
-      {children}
-      <Toaster position="top-center" richColors closeButton />
-    </TooltipProvider>
+    <ThemeProvider>
+      <TooltipProvider delayDuration={200}>
+        {children}
+        <Toaster />
+      </TooltipProvider>
+    </ThemeProvider>
   );
 }

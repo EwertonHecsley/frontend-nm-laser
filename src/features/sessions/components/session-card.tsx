@@ -195,7 +195,7 @@ export function SessionCard({
               <img
                 src={session.signature}
                 alt={`Assinatura da sessão ${session.sessionNumber}`}
-                className="h-24 w-full max-w-md rounded-lg border bg-white object-contain p-2"
+                className="h-24 w-full max-w-md rounded-lg border bg-background object-contain p-2"
               />
             ) : (
               <p className="line-clamp-3 break-all whitespace-pre-wrap rounded-lg border bg-muted/40 px-3 py-2 text-xs">

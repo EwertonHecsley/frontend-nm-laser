@@ -184,7 +184,7 @@ function HighlightCard({
           <CardTitle className="truncate text-lg">{value}</CardTitle>
           <p className="text-xs text-muted-foreground">{detail}</p>
         </div>
-        <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-secondary text-secondary-foreground">
+        <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-accent text-accent-foreground shadow-sm">
           <Icon className="size-4" aria-hidden="true" />
         </span>
       </CardHeader>
